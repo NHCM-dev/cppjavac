@@ -13,8 +13,7 @@ int main(int argc, char** argv)
     if (argc <= 1)
     {
         jcutils::printlnErrorBy("Missing options");
-        jcutils::print(javac::helpDoc);
-        return 1;
+        return -1;
     }
 
     for (int i = 1; i < argc; i++)
@@ -33,6 +32,16 @@ int main(int argc, char** argv)
     {
         jcutils::print(javac::version);
         return 1;
+    }
+
+    if (jcutils::contains(javac::args, "--list-extensions"))
+    {
+        jcutils::printlnInfoBy("List of currently supported compiler extensions");
+        for (const auto& info : javac::listExtensions())
+        {
+            jcutils::println(info.name, jcutils::PrintColor::None);
+        }
+        return 0;
     }
 
     javac::JavacConfig* parsedConfig = nullptr;

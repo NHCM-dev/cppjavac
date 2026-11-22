@@ -16,7 +16,7 @@ namespace javac
             throw std::invalid_argument("No arguments given");
         }
         if (jcutils::contains(args, "-h") || jcutils::contains(args, "--help")
-            || jcutils::contains(args, "--version"))
+            || jcutils::contains(args, "--version") || jcutils::contains(args, "--list-extensions"))
         {
             return nullptr;
         }
@@ -37,6 +37,7 @@ namespace javac
         LangLevel targetLangLevel = LangLevel::Eight;
         bool verbose = false;
         bool nowarn = false;
+        std::set<JavacExtension> extensions;
 
         for (std::size_t i = 0; i < args.size(); ++i)
         {
@@ -57,6 +58,11 @@ namespace javac
 
             const bool hasNextArg = i + 1 < args.size() && !args[i + 1].starts_with('-');
             const std::string* nextArg = hasNextArg ? &args[i + 1] : nullptr;
+            if (arg.starts_with("-ex:") || arg.starts_with("--extension:"))
+            {
+                extensions.merge(parseExtensions(std::string_view(arg).substr(arg.find(':') + 1)));
+                continue;
+            }
             if (argIs("-s", "--source-path"))
             {
                 if (!hasNextArg)
@@ -214,7 +220,8 @@ namespace javac
             throw std::invalid_argument("Action is missing");
         }
 
-        return new JavacConfig(*action, srcPaths, outputDir, classPaths, encoding, debugs, sourceLangLevel, targetLangLevel, verbose, nowarn);
+        return new JavacConfig(*action, srcPaths, outputDir, classPaths, encoding, debugs,
+            sourceLangLevel, targetLangLevel, verbose, nowarn, std::move(extensions));
     }
 
     std::set<DebugInfo> ConfigParser::parseDebugInfo(std::string_view value)

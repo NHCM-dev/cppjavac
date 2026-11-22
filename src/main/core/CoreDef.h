@@ -16,6 +16,4 @@ namespace fs = std::filesystem;
 
 using Path = fs::path;
 
-
-
 #endif //JAVACOMPILER_COREDEF_H

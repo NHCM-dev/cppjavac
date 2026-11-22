@@ -31,9 +31,11 @@ namespace javac
 
     enum class JavaKeywordKind : std::uint8_t
     {
-        Normal,      // Ordinary reserved keyword
-        Prohibited,  // Reserved but unused
-        Restricted   // Context-sensitive keyword
+        Reserved,
+        ReservedUnused, // const and goto
+        Contextual,     // Recognized as a keyword in specific syntactic contexts
+        BooleanLiteral,
+        NullLiteral
     };
 
     class JavaKeyword
@@ -44,7 +46,7 @@ namespace javac
 
     public:
         constexpr JavaKeyword(std::string_view string,
-            LangLevel minLangLevel = LangLevel::Eight, JavaKeywordKind kind = JavaKeywordKind::Normal)
+            LangLevel minLangLevel = LangLevel::Eight, JavaKeywordKind kind = JavaKeywordKind::Reserved)
             : string(string),
               minLangLevel(minLangLevel),
               kind(kind) {}
@@ -89,7 +91,7 @@ namespace javac
     inline constexpr JavaKeyword CATCH{"catch"};
     inline constexpr JavaKeyword CHAR{"char"};
     inline constexpr JavaKeyword CLASS{"class"};
-    inline constexpr JavaKeyword CONST{"const", LangLevel::Eight, JavaKeywordKind::Prohibited};
+    inline constexpr JavaKeyword CONST{"const", LangLevel::Eight, JavaKeywordKind::ReservedUnused};
     inline constexpr JavaKeyword CONTINUE{"continue"};
     inline constexpr JavaKeyword DEFAULT{"default"};
     inline constexpr JavaKeyword DO{"do"};
@@ -101,7 +103,7 @@ namespace javac
     inline constexpr JavaKeyword FINALLY{"finally"};
     inline constexpr JavaKeyword FLOAT{"float"};
     inline constexpr JavaKeyword FOR{"for"};
-    inline constexpr JavaKeyword GOTO{"goto", LangLevel::Eight, JavaKeywordKind::Prohibited};
+    inline constexpr JavaKeyword GOTO{"goto", LangLevel::Eight, JavaKeywordKind::ReservedUnused};
     inline constexpr JavaKeyword IF{"if"};
     inline constexpr JavaKeyword IMPLEMENTS{"implements"};
     inline constexpr JavaKeyword IMPORT{"import"};
@@ -131,36 +133,41 @@ namespace javac
     inline constexpr JavaKeyword VOLATILE{"volatile"};
     inline constexpr JavaKeyword WHILE{"while"};
 
+    // Fixed literal spellings share the lookup table with keywords.
+    inline constexpr JavaKeyword TRUE_LITERAL{"true", LangLevel::Eight, JavaKeywordKind::BooleanLiteral};
+    inline constexpr JavaKeyword FALSE_LITERAL{"false", LangLevel::Eight, JavaKeywordKind::BooleanLiteral};
+    inline constexpr JavaKeyword NULL_LITERAL{"null", LangLevel::Eight, JavaKeywordKind::NullLiteral};
+
     // Java 11 (features introduced in Java 9–11)
     inline constexpr JavaKeyword UNDERSCORE{"_", LangLevel::Eleven};
 
     // Module system
-    inline constexpr JavaKeyword MODULE{"module", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword OPEN{"open", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword OPENS{"opens", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword REQUIRES{"requires", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword TRANSITIVE{"transitive", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword EXPORTS{"exports", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword TO{"to", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword USES{"uses", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword PROVIDES{"provides", LangLevel::Eleven, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword WITH{"with", LangLevel::Eleven, JavaKeywordKind::Restricted};
+    inline constexpr JavaKeyword MODULE{"module", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword OPEN{"open", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword OPENS{"opens", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword REQUIRES{"requires", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword TRANSITIVE{"transitive", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword EXPORTS{"exports", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword TO{"to", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword USES{"uses", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword PROVIDES{"provides", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword WITH{"with", LangLevel::Eleven, JavaKeywordKind::Contextual};
 
     // Local variable type inference
-    inline constexpr JavaKeyword VAR{"var", LangLevel::Eleven, JavaKeywordKind::Restricted};
+    inline constexpr JavaKeyword VAR{"var", LangLevel::Eleven, JavaKeywordKind::Contextual};
 
     // Java 17 (features introduced in Java 12–17)
-    inline constexpr JavaKeyword YIELD{"yield", LangLevel::Seventeen, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword RECORD{"record", LangLevel::Seventeen, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword SEALED{"sealed", LangLevel::Seventeen, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword PERMITS{"permits", LangLevel::Seventeen, JavaKeywordKind::Restricted};
-    inline constexpr JavaKeyword NON_SEALED{"non-sealed", LangLevel::Seventeen, JavaKeywordKind::Restricted};
+    inline constexpr JavaKeyword YIELD{"yield", LangLevel::Seventeen, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword RECORD{"record", LangLevel::Seventeen, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword SEALED{"sealed", LangLevel::Seventeen, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword PERMITS{"permits", LangLevel::Seventeen, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword NON_SEALED{"non-sealed", LangLevel::Seventeen, JavaKeywordKind::Contextual};
 
     // Java 21
-    inline constexpr JavaKeyword WHEN{"when", LangLevel::TwentyOne, JavaKeywordKind::Restricted};
+    inline constexpr JavaKeyword WHEN{"when", LangLevel::TwentyOne, JavaKeywordKind::Contextual};
 
-    // Looks up the spelling, including restricted keywords. The caller checks
-    // the language level and decides whether a restricted word is a keyword in context.
+    // Looks up keywords and fixed literal spellings. The caller checks
+    // the language level and decides whether a contextual word is a keyword in its current context.
     [[nodiscard]] const JavaKeyword* findKeyword(std::string_view spelling);
 }
 

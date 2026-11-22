@@ -6,6 +6,7 @@
 #define JAVACOMPILER_JAVACCONFIG_H
 
 #include "CoreDef.h"
+#include "def/Extension.h"
 
 namespace javac
 {
@@ -34,6 +35,7 @@ namespace javac
 
         bool verbose; // Print debug information during compile or no
         bool nowarn; // Disable warning
+        std::set<JavacExtension> extensions;
 
         JavacConfig(
             JavacAction action,
@@ -45,7 +47,8 @@ namespace javac
             LangLevel sourceLangLevel,
             LangLevel targetLangLevel,
             bool verbose,
-            bool nowarn
+            bool nowarn,
+            std::set<JavacExtension> extensions = {}
         )
         : action(action),
           srcPaths(std::move(srcPaths)),
@@ -56,8 +59,14 @@ namespace javac
           sourceLangLevel(sourceLangLevel),
           targetLangLevel(targetLangLevel),
           verbose(verbose),
-          nowarn(nowarn)
+          nowarn(nowarn),
+          extensions(std::move(extensions))
         {
+        }
+
+        [[nodiscard]] bool hasExtension(JavacExtension extension) const
+        {
+            return extensions.contains(extension);
         }
     };
 }

@@ -16,7 +16,10 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hxx"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc")
-add_executable(JavaCompiler ${JavaCompiler_SOURCES})
+add_executable(JavaCompiler ${JavaCompiler_SOURCES}
+        src/main/core/def/TextEncoding.cpp
+        src/main/core/def/Extension.cpp
+        src/main/core/def/Extension.h)
 target_include_directories(JavaCompiler PRIVATE src)
 set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
 

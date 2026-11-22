@@ -28,6 +28,8 @@ Date 2026-11-22
 
     inline std::string helpDoc =
 R"(
+Simple Java Compiler
+
 Usage: javac <options> [source files]
 
 Required options:
@@ -37,20 +39,22 @@ Required options:
 
 Options:
 
-    -s, --source-path <path>                        Specify source file input directory
-    -o, --output-path <path>                        Specify class file output directory directory
-    -cp, --class-path <path>                        Specify the use of classpath directory when compiling
-    -g, --generate-debug:{lines,vars,source:none}   Generate debug information
-    -h, --help                                      Print this help message
-    -v, --verbose                                   Print debug information when compiling
+    -ex, --extension:{<name[,name...]>:all}                 Enable compiler extensions
+    -s, --source-path <path>                                Specify source file input directory
+    -o, --output-path <path>                                Specify class file output directory directory
+    -cp, --class-path <path>                                Specify the use of classpath directory when compiling
+    -g, --generate-debug:{lines,vars,source:none}           Generate debug information
+    -h, --help                                              Print this help message
+    -v, --verbose                                           Print debug information when compiling
 
-    --source <language level>                       Specify source file language level capability
-    --target <language level>                       Specify output class file language level capability
-    --encoding <encode>                             Specify source file text encoding
-    --nowarn                                        Disable warning when compiling
-    --version                                       Print current program version
+    --list-extensions                                       List all current compiler extensions
+    --source <language level>                               Specify source file language level capability
+    --target <language level>                               Specify output class file language level capability
+    --encoding <encode>                                     Specify source file text encoding
+    --nowarn                                                Disable warning when compiling
+    --version                                               Print current program version
 
-    [source files]                                   Specify source file inputs
+    [source files]                                          Specify source file inputs
 
 )";
 }

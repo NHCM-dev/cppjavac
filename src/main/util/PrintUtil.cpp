@@ -87,6 +87,42 @@ namespace jcutils
         writePrefixed(std::cout, prefix, str, prefixColor, ownerColor, strColor);
     }
 
+    void printInfoBy(std::string_view str,
+        PrintColor infoColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        printPrefixBy("info", str, infoColor, ownerColor, strColor);
+    }
+
+    void printlnInfoBy(std::string_view str,
+        PrintColor infoColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        printlnPrefixBy("info", str, infoColor, ownerColor, strColor);
+    }
+
+    void printDebugBy(std::string_view str,
+        PrintColor debugColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        printPrefixBy("debug", str, debugColor, ownerColor, strColor);
+    }
+
+    void printlnDebugBy(std::string_view str,
+        PrintColor debugColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        printlnPrefixBy("debug", str, debugColor, ownerColor, strColor);
+    }
+
+    void printSuccessBy(std::string_view str,
+        PrintColor successColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        printPrefixBy("success", str, successColor, ownerColor, strColor);
+    }
+
+    void printlnSuccessBy(std::string_view str,
+        PrintColor successColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        printlnPrefixBy("success", str, successColor, ownerColor, strColor);
+    }
+
     void printErrorBy(std::string_view str,
         PrintColor errorColor, PrintColor ownerColor, PrintColor strColor)
     {

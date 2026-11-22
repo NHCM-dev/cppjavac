@@ -58,6 +58,25 @@ namespace jcutils
         PrintColor prefixColor = PrintColor::Default, PrintColor ownerColor = PrintColor::Default,
         PrintColor strColor = PrintColor::BrightWhite);
 
+    void printInfoBy(std::string_view str = {},
+        PrintColor infoColor = PrintColor::BrightCyan, PrintColor ownerColor = PrintColor::Default,
+        PrintColor strColor = PrintColor::BrightWhite);
+    void printlnInfoBy(std::string_view str = {},
+        PrintColor infoColor = PrintColor::BrightCyan, PrintColor ownerColor = PrintColor::Default,
+        PrintColor strColor = PrintColor::BrightWhite);
+    void printDebugBy(std::string_view str = {},
+        PrintColor debugColor = PrintColor::BrightBlack, PrintColor ownerColor = PrintColor::Default,
+        PrintColor strColor = PrintColor::BrightWhite);
+    void printlnDebugBy(std::string_view str = {},
+        PrintColor debugColor = PrintColor::BrightBlack, PrintColor ownerColor = PrintColor::Default,
+        PrintColor strColor = PrintColor::BrightWhite);
+    void printSuccessBy(std::string_view str = {},
+        PrintColor successColor = PrintColor::BrightGreen, PrintColor ownerColor = PrintColor::Default,
+        PrintColor strColor = PrintColor::BrightWhite);
+    void printlnSuccessBy(std::string_view str = {},
+        PrintColor successColor = PrintColor::BrightGreen, PrintColor ownerColor = PrintColor::Default,
+        PrintColor strColor = PrintColor::BrightWhite);
+
     // Diagnostics go to stderr.
     void printErrorBy(std::string_view str = {},
         PrintColor errorColor = PrintColor::BrightRed, PrintColor ownerColor = PrintColor::Default,
