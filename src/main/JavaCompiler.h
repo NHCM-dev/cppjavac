@@ -12,6 +12,8 @@
 
 namespace javac
 {
+    inline std::string program = "javac";
+
     inline std::vector<std::string> args;
     inline JavacConfig config;
 
@@ -26,7 +28,7 @@ Date 2026-11-22
 
     inline std::string helpDoc =
 R"(
-Usage: javac <options> [source file]
+Usage: javac <options> [source files]
 
 Required options:
 
@@ -48,6 +50,7 @@ Options:
     --nowarn                                        Disable warning when compiling
     --version                                       Print current program version
 
+    [source files]                                   Specify source file inputs
 )";
 }
 

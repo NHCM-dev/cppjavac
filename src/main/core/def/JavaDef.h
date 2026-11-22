@@ -9,7 +9,7 @@ namespace javac
 {
     enum class DebugInfo
     {
-        Lines, // Line numer
+        Lines, // Line number
         Vars, // Local variable
         Source // Source file
     };

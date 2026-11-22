@@ -12,7 +12,7 @@ int main(int argc, char** argv)
 {
     if (argc <= 1)
     {
-        jcutils::println("\nMissing options");
+        jcutils::printlnErrorBy("Missing options");
         jcutils::print(javac::helpDoc);
         return 1;
     }
@@ -42,13 +42,11 @@ int main(int argc, char** argv)
         delete parsedConfig;
     } catch (std::invalid_argument& e)
     {
-        jcutils::println();
-        jcutils::println(e.what());
-        jcutils::println();
+        jcutils::printlnErrorBy(e.what());
         return -1;
     }
 
-    jcutils::println("not implemented program");
+    jcutils::printlnWarningBy("Not implemented program");
 
     return 0;
 }

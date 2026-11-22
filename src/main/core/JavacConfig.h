@@ -20,7 +20,6 @@ namespace javac
         JavacAction action; // Action to do for this current program run
 
         // Input & Output
-        std::vector<Path> srcFiles;
         std::vector<Path> srcPaths;
         Path outputDir;
 
@@ -40,7 +39,6 @@ namespace javac
 
         JavacConfig(
             JavacAction action,
-            std::vector<Path> srcFiles,
             std::vector<Path> srcPaths,
             Path outputDir,
             std::vector<Path> classPaths,
@@ -52,7 +50,6 @@ namespace javac
             bool nowarn
         )
         : action(action),
-          srcFiles(std::move(srcFiles)),
           srcPaths(std::move(srcPaths)),
           outputDir(std::move(outputDir)),
           classPaths(std::move(classPaths)),

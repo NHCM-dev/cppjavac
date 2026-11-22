@@ -28,7 +28,6 @@ namespace javac
         bool encodingGiven = false;
 
         std::optional<JavacAction> action;
-        std::vector<Path> srcFiles = {};
         std::vector<Path> srcPaths = {};
         Path outputDir = ".";
         std::vector<Path> classPaths = {};
@@ -65,10 +64,6 @@ namespace javac
                     throw std::invalid_argument("No source path given");
                 }
                 Path srcPath = {*nextArg};
-                if (!exists(srcPath))
-                {
-                    throw std::invalid_argument("Source path \"" + *nextArg + "\" does not exist");
-                }
                 srcPaths.emplace_back(srcPath);
                 i++;
                 continue;
@@ -95,10 +90,6 @@ namespace javac
                     throw std::invalid_argument("No classpath given");
                 }
                 Path cp = {*nextArg};
-                if (!exists(cp))
-                {
-                    throw std::invalid_argument("Classpath \"" + *nextArg + "\" does not exist");
-                }
                 classPaths.emplace_back(cp);
                 i++;
                 continue;
@@ -215,22 +206,7 @@ namespace javac
             }
 
             Path parsePath = arg;
-
-            if (!exists(parsePath))
-            {
-                throw std::invalid_argument("Input path or file \"" + arg + "\" does not exist");
-            }
-
-            if (is_regular_file(parsePath))
-            {
-                srcFiles.push_back(parsePath);
-            } else if (is_directory(parsePath))
-            {
-                srcPaths.push_back(parsePath);
-            } else
-            {
-                throw std::invalid_argument("Input \"" + arg + "\" is neither a directory nor a regular file");
-            }
+            srcPaths.push_back(parsePath);
         }
 
         if (!action)
@@ -238,7 +214,7 @@ namespace javac
             throw std::invalid_argument("Action is missing");
         }
 
-        return new JavacConfig(*action, srcFiles, srcPaths, outputDir, classPaths, encoding, debugs, sourceLangLevel, targetLangLevel, verbose, nowarn);
+        return new JavacConfig(*action, srcPaths, outputDir, classPaths, encoding, debugs, sourceLangLevel, targetLangLevel, verbose, nowarn);
     }
 
     std::set<DebugInfo> ConfigParser::parseDebugInfo(std::string_view value)
