@@ -15,9 +15,18 @@ namespace javac
     inline std::vector<std::string> args;
     inline JavacConfig config;
 
+    inline std::string version =
+R"(
+javac (Simple Java Compiler) for Java 8
+Version 0.0.1
+Build b0.1
+Date 2026-11-22
+
+)";
+
     inline std::string helpDoc =
 R"(
-Usage: javac <options> [source files]
+Usage: javac <options> [source file]
 
 Required options:
 
@@ -38,6 +47,7 @@ Options:
     --encoding <encode>                             Specify source file text encoding
     --nowarn                                        Disable warning when compiling
     --version                                       Print current program version
+
 )";
 }
 

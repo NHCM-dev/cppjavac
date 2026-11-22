@@ -17,13 +17,8 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc")
 add_executable(JavaCompiler ${JavaCompiler_SOURCES}
-        src/main/core/JavacConfig.h
-        src/main/core/CoreDef.h
-        src/main/core/def/TextEncoding.h
-        src/main/core/def/JavaDef.h
-        src/main/util/DataSetUtil.h
-        src/main/util/PrintUtil.cpp
-        src/main/util/PrintUtil.h)
+        src/main/util/MathUtil.cpp
+        src/main/util/MathUtil.h)
 target_include_directories(JavaCompiler PRIVATE src)
 set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
 

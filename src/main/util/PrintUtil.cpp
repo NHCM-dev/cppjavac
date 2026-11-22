@@ -8,23 +8,17 @@
 
 namespace jcutils
 {
-    void print(std::string str)
+    void print(std::string_view str, PrintColor color)
     {
-        std::cout << str;
+        std::cout << "\033["
+                  << static_cast<int>(color)
+                  << "m"
+                  << str
+                  << "\033[0m";
     }
-
-    void print(char* str)
+    void println(std::string_view str, PrintColor color)
     {
-        std::cout << str;
-    }
-
-    void println(std::string str)
-    {
-        std::cout << str << std::endl;
-    }
-
-    void println(char* str)
-    {
-        std::cout << str << std::endl;
+        print(str, color);
+        std::cout << '\n';
     }
 }

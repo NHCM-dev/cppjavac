@@ -4,13 +4,15 @@
 
 #include "JavaCompiler.h"
 
-#include "util/DataSetUtil.h"
+#include "cli/ConfigParser.h"
+#include "util/DataUtil.h"
 #include "util/PrintUtil.h"
 
 int main(int argc, char** argv)
 {
     if (argc <= 1)
     {
+        jcutils::println("\nMissing options");
         jcutils::print(javac::helpDoc);
         return 1;
     }
@@ -20,12 +22,33 @@ int main(int argc, char** argv)
         javac::args.emplace_back(argv[i]);
     }
 
-    if (jcutils::contains(javac::args, {"-h"})
-        || jcutils::contains(javac::args, {"--help"}))
+    if (jcutils::contains(javac::args, "-h")
+        || jcutils::contains(javac::args, "--help"))
     {
         jcutils::print(javac::helpDoc);
         return 1;
     }
+
+    if (jcutils::contains(javac::args, "--version"))
+    {
+        jcutils::print(javac::version);
+        return 1;
+    }
+
+    try
+    {
+        javac::JavacConfig* parsedConfig = javac::ConfigParser::parseConfig(javac::args);
+        javac::config = *parsedConfig;
+        delete parsedConfig;
+    } catch (std::invalid_argument& e)
+    {
+        jcutils::println();
+        jcutils::println(e.what());
+        jcutils::println();
+        return -1;
+    }
+
+    jcutils::println("not implemented program");
 
     return 0;
 }

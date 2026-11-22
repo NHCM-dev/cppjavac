@@ -9,10 +9,26 @@ namespace javac
 {
     enum class DebugInfo
     {
-        Line, // Line numer
+        Lines, // Line numer
         Vars, // Local variable
         Source // Source file
     };
+
+    enum class LangLevel : uint8_t
+    {
+        Eight = 8
+    };
+
+    inline std::optional<LangLevel> parseLangLevel(int level)
+    {
+        switch (level)
+        {
+            case static_cast<int>(LangLevel::Eight):
+                return LangLevel::Eight;
+            default:
+                return std::nullopt;
+        }
+    }
 }
 
 #endif //JAVACOMPILER_JAVADEF_H
