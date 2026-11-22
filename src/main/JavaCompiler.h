@@ -15,7 +15,7 @@ namespace javac
     inline std::string program = "javac";
 
     inline std::vector<std::string> args;
-    inline JavacConfig config;
+    inline JavacConfig* config = nullptr;
 
     inline std::string version =
 R"(
@@ -51,6 +51,7 @@ Options:
     --version                                       Print current program version
 
     [source files]                                   Specify source file inputs
+
 )";
 }
 

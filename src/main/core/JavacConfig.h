@@ -35,8 +35,6 @@ namespace javac
         bool verbose; // Print debug information during compile or no
         bool nowarn; // Disable warning
 
-        JavacConfig() = default;
-
         JavacConfig(
             JavacAction action,
             std::vector<Path> srcPaths,

@@ -10,36 +10,33 @@
 
 namespace jcutils
 {
-    namespace
+    constexpr std::string_view colorStart = "\033[";
+    constexpr std::string_view colorReset = "\033[0m";
+
+    static void writeColored(std::ostream& output, std::string_view str, PrintColor color)
     {
-        constexpr std::string_view colorStart = "\033[";
-        constexpr std::string_view colorReset = "\033[0m";
-
-        void writeColored(std::ostream& output, std::string_view str, PrintColor color)
+        if (str.empty() || color == PrintColor::None)
         {
-            if (str.empty() || color == PrintColor::None)
-            {
-                output << str;
-                return;
-            }
-            output << colorStart << std::to_string(static_cast<int>(color)) << 'm' << str << colorReset;
+            output << str;
+            return;
         }
+        output << colorStart << std::to_string(static_cast<int>(color)) << 'm' << str << colorReset;
+    }
 
-        void writePrefixed(std::ostream& output, std::string_view prefix,
-            std::string_view str, PrintColor prefixColor, PrintColor ownerColor, PrintColor strColor)
+    static void writePrefixed(std::ostream& output, std::string_view prefix,
+        std::string_view str, PrintColor prefixColor, PrintColor ownerColor, PrintColor strColor)
+    {
+        if (!javac::program.empty())
         {
-            if (!javac::program.empty())
-            {
-                writeColored(output, javac::program, ownerColor);
-                output << ": ";
-            }
-            if (!prefix.empty())
-            {
-                writeColored(output, prefix, prefixColor);
-                output << ": ";
-            }
-            writeColored(output, str, strColor);
+            writeColored(output, javac::program, ownerColor);
+            output << ": ";
         }
+        if (!prefix.empty())
+        {
+            writeColored(output, prefix, prefixColor);
+            output << ": ";
+        }
+        writeColored(output, str, strColor);
     }
 
     std::string colorString(std::string_view str, PrintColor color)

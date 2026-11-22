@@ -35,18 +35,20 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    javac::JavacConfig* parsedConfig = nullptr;
     try
     {
-        javac::JavacConfig* parsedConfig = javac::ConfigParser::parseConfig(javac::args);
-        javac::config = *parsedConfig;
-        delete parsedConfig;
+        parsedConfig = javac::ConfigParser::parseConfig(javac::args);
+        javac::config = parsedConfig;
     } catch (std::invalid_argument& e)
     {
+        delete parsedConfig;
         jcutils::printlnErrorBy(e.what());
         return -1;
     }
 
     jcutils::printlnWarningBy("Not implemented program");
 
+    delete javac::config;
     return 0;
 }

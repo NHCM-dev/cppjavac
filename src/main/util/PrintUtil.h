@@ -40,37 +40,37 @@ namespace jcutils
     void println(std::string_view str = {}, PrintColor color = PrintColor::Default);
 
     void printBy(std::string_view str = {},
-        PrintColor ownerColor = PrintColor::Default, PrintColor strColor = PrintColor::Default);
+        PrintColor ownerColor = PrintColor::Default, PrintColor strColor = PrintColor::BrightWhite);
     // This overload applies prefixColor to the separator after the owner.
     void printPrefixBy(std::string_view str = {},
         PrintColor prefixColor = PrintColor::Default, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
     void printPrefixBy(std::string_view prefix, std::string_view str,
         PrintColor prefixColor = PrintColor::Default, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
 
     void printlnBy(std::string_view str = {},
-        PrintColor ownerColor = PrintColor::Default, PrintColor strColor = PrintColor::Default);
+        PrintColor ownerColor = PrintColor::Default, PrintColor strColor = PrintColor::BrightWhite);
     void printlnPrefixBy(std::string_view str = {},
         PrintColor prefixColor = PrintColor::Default, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
     void printlnPrefixBy(std::string_view prefix, std::string_view str,
         PrintColor prefixColor = PrintColor::Default, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
 
     // Diagnostics go to stderr.
     void printErrorBy(std::string_view str = {},
         PrintColor errorColor = PrintColor::BrightRed, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
     void printWarningBy(std::string_view str = {},
         PrintColor warningColor = PrintColor::BrightYellow, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
     void printlnErrorBy(std::string_view str = {},
         PrintColor errorColor = PrintColor::BrightRed, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
     void printlnWarningBy(std::string_view str = {},
         PrintColor warningColor = PrintColor::BrightYellow, PrintColor ownerColor = PrintColor::Default,
-        PrintColor strColor = PrintColor::Default);
+        PrintColor strColor = PrintColor::BrightWhite);
 }
 
 #endif //JAVACOMPILER_PRINTUTIL_H
