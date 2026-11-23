@@ -4,7 +4,7 @@
 
 #include "Compiler.h"
 
-#include <format>
+#include <cstdio>
 
 #include "JavaCompiler.h"
 #include "core/JavacConfig.h"
@@ -68,13 +68,17 @@ namespace javac
                             }
                             else
                             {
-                                content += std::format("\\u{:04X}", static_cast<unsigned>(ch));
+                                char escape[7];
+                                std::snprintf(escape, sizeof(escape), "\\u%04X", static_cast<unsigned>(ch));
+                                content += escape;
                             }
                     }
                 }
-                jcutils::println(std::format("{}:{} {} \"{}\"", token.location.line,
-                    token.location.column, typeNames[static_cast<std::size_t>(token.tokenType)], content),
-                    jcutils::PrintColor::None);
+                std::string output = std::to_string(token.location.line) + ':'
+                    + std::to_string(token.location.column) + ' ';
+                output += typeNames[static_cast<std::size_t>(token.tokenType)];
+                output += " \"" + content + '"';
+                jcutils::println(output, jcutils::PrintColor::None);
             }
         }
         return 0;
