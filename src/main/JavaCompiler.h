@@ -44,7 +44,7 @@ Required options:
     -c, --compile                  Compile source files into class files
     -i, --inspect                  Check for errors and warnings without
                                    generating output
-    -l, --lexer                    Only generate lexer output
+    -l, --lex                      Test lexer functionality and write tokens result
 
 Options:
 

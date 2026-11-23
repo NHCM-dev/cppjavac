@@ -48,7 +48,7 @@ namespace javac
 
             bool compile = argIs("-c", "--compile");
             bool inspect = argIs("-i", "--inspect");
-            bool lexer = argIs("-l", "--lexer");
+            bool lexer = argIs("-l", "--lex");
 
             if (compile || inspect || lexer)
             {

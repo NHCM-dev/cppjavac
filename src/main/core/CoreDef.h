@@ -15,5 +15,6 @@
 namespace fs = std::filesystem;
 
 using Path = fs::path;
+using ByteArray = std::vector<std::byte>;
 
 #endif //JAVACOMPILER_COREDEF_H

@@ -54,8 +54,8 @@ namespace javac
         Lexer(std::u16string_view sourceCode, std::set<JavacExtension> extensions = {},
             LangLevel sourceLangLevel = LangLevel::Eight);
 
-        // Include Whitespace and NewLine tokens when spaceAndLine is true.
-        std::vector<Token> lex(bool spaceAndLine = false);
+        // Include comment tokens when comment is true. Unterminated comments always produce Invalid.
+        std::vector<Token> lex(bool spaceAndLine = false, bool comment = false);
     };
 } // javac
 

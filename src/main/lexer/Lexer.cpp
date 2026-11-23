@@ -41,7 +41,7 @@ namespace javac
         return {sourceCode.data() + startOffset, amountToRead};
     }
 
-    std::vector<Token> Lexer::lex(bool spaceAndLine)
+    std::vector<Token> Lexer::lex(bool spaceAndLine, bool comment)
     {
         tokens.clear();
         tokenBuffer.clear();
@@ -68,7 +68,14 @@ namespace javac
             pushToken(TokenType::Invalid, std::nullopt, std::nullopt, reason);
         };
         const auto finishComment = [&] {
-            pushToken(needEndCommentType);
+            if (comment)
+            {
+                pushToken(needEndCommentType);
+            }
+            else
+            {
+                tokenBuffer.clear();
+            }
             needEndComment = false;
             needEndCommentType = TokenType::Invalid;
         };
