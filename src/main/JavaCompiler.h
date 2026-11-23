@@ -26,7 +26,7 @@ namespace javac
 
     inline std::string version =
 R"(
-javac (Simple Java Compiler) for Java 8
+cppjavac for Java 8
 Version 0.0.1
 Build b0.1
 Date 2026-11-22
@@ -35,7 +35,7 @@ Date 2026-11-22
 
     inline std::string helpDoc =
 R"(
-Simple Java Compiler
+cppjavac
 
 Usage: javac <options> [source files]
 

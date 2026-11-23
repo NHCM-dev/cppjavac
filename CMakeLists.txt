@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.4)
+cmake_minimum_required(VERSION 3.21)
 project(JavaCompiler)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -17,11 +17,7 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.inc")
-add_executable(JavaCompiler ${JavaCompiler_SOURCES}
-        src/main/Compiler.cpp
-        src/main/Compiler.h
-        src/main/tool/FileIoTool.cpp
-        src/main/tool/FileIoTool.h)
+add_executable(JavaCompiler ${JavaCompiler_SOURCES})
 target_include_directories(JavaCompiler PRIVATE src)
 set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
 
