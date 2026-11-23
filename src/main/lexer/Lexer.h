@@ -51,10 +51,11 @@ namespace javac
         std::span<const char16_t> readNextX(std::size_t startOffset, std::size_t length);
 
     public:
-        Lexer(std::u16string_view sourceCode, std::set<JavacExtension> extensions,
+        Lexer(std::u16string_view sourceCode, std::set<JavacExtension> extensions = {},
             LangLevel sourceLangLevel = LangLevel::Eight);
 
-        std::vector<Token> lex();
+        // Include Whitespace and NewLine tokens when spaceAndLine is true.
+        std::vector<Token> lex(bool spaceAndLine = false);
     };
 } // javac
 

@@ -57,8 +57,10 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int exitCode = javac::Compiler::run();
+    javac::compiler = new javac::Compiler();
+    int exitCode = javac::compiler->run();
 
+    delete javac::compiler;
     delete javac::config;
 
     return exitCode;

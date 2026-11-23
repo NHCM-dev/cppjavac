@@ -6,17 +6,18 @@
 #define JAVACOMPILER_COMPILER_H
 #include <map>
 
-#include "JavaCompiler.h"
 #include "core/JavacConfig.h"
 #include "lexer/LexerDef.h"
+#include "util/DataUtil.h"
 
 namespace javac
 {
     struct CompileRtData
     {
+        std::vector<std::string> errors;
+        std::vector<std::string> warnings;
         std::map<Path, std::vector<Token>> tokenStreams = {};
-
-        std::vector<Path> filesToCompile = {};
+        std::set<Path> filesToCompile = {};
 
         std::vector<Token>* getTokens(const Path& sourcePath)
         {
@@ -26,23 +27,22 @@ namespace javac
 
     class Compiler
     {
-        CompileRtData* data = nullptr;
+        CompileRtData* compileRtData = nullptr;
         JavacConfig& compilerConfig;
 
         int compile();
         int inspect();
         int lex();
-        void preProcess();
+        bool preProcess();
+
+        [[nodiscard]]
+        bool verbose() const;
     public:
-        Compiler()
-        : compilerConfig(*config)
-        {
-            data = new CompileRtData();
-        }
+        Compiler();
+
         ~Compiler()
         {
-            free(data);
-            delete data;
+            delete compileRtData;
         }
 
         int run();

@@ -19,7 +19,9 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.inc")
 add_executable(JavaCompiler ${JavaCompiler_SOURCES}
         src/main/Compiler.cpp
-        src/main/Compiler.h)
+        src/main/Compiler.h
+        src/main/tool/FileIoTool.cpp
+        src/main/tool/FileIoTool.h)
 target_include_directories(JavaCompiler PRIVATE src)
 set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
 

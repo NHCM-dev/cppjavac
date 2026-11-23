@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include <ranges>
+#include <set>
 #include <string>
 #include <string_view>
 
@@ -30,6 +31,18 @@ namespace jcutils
     {
         auto it = map.find(key);
         return it == map.end() ? nullptr : &it->second;
+    }
+
+    /**
+     * Test if an element is already inserted or automatically insert into a std::set
+     * @param set target set
+     * @param value elements to insert
+     * @return Returns true if inserted successfully, false if the set already contains the elements
+     */
+    template<typename T>
+    bool containsOrInsert(std::set<T>& set, const T& value)
+    {
+        return set.insert(value).second;
     }
 
     std::string toLower(std::string str);

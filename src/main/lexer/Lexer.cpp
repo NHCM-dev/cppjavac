@@ -41,7 +41,7 @@ namespace javac
         return {sourceCode.data() + startOffset, amountToRead};
     }
 
-    std::vector<Token> Lexer::lex()
+    std::vector<Token> Lexer::lex(bool spaceAndLine)
     {
         tokens.clear();
         tokenBuffer.clear();
@@ -123,7 +123,14 @@ namespace javac
                 }
                 if (!needEndComment)
                 {
-                    pushToken(TokenType::NewLine);
+                    if (spaceAndLine)
+                    {
+                        pushToken(TokenType::NewLine);
+                    }
+                    else
+                    {
+                        tokenBuffer.clear();
+                    }
                 }
                 ++line;
                 column = 0;
@@ -199,7 +206,14 @@ namespace javac
                     ++end;
                 }
                 appendRest(end - offset);
-                pushToken(TokenType::Whitespace);
+                if (spaceAndLine)
+                {
+                    pushToken(TokenType::Whitespace);
+                }
+                else
+                {
+                    tokenBuffer.clear();
+                }
                 continue;
             }
 

@@ -12,7 +12,11 @@
 
 namespace javac
 {
+    class Compiler;
+
     inline std::string program = "javac";
+
+    inline Compiler* compiler = nullptr;
 
     inline std::vector<std::string> args;
     inline JavacConfig* config = nullptr;
