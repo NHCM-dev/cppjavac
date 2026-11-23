@@ -10,10 +10,11 @@
 
 namespace javac
 {
-    enum class JavacAction : bool
+    enum class JavacAction : uint8_t
     {
-        Compile = true,
-        Inspect = false
+        Compile = 0,
+        Inspect = 1,
+        Lexer = 2
     };
 
     struct JavacConfig

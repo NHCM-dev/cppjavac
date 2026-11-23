@@ -45,14 +45,18 @@ namespace javac
             const auto argIs = [&arg](auto... spellings) {
                 return jcutils::matches(arg, spellings...);
             };
-            const bool compile = argIs("-c", "--compile");
-            if (compile || argIs("-i", "--inspect"))
+
+            bool compile = argIs("-c", "--compile");
+            bool inspect = argIs("-i", "--inspect");
+            bool lexer = argIs("-l", "--lexer");
+
+            if (compile || inspect || lexer)
             {
                 if (action)
                 {
                     throw std::invalid_argument("Duplicate compiler action given");
                 }
-                action = compile ? JavacAction::Compile : JavacAction::Inspect;
+                action = compile ? JavacAction::Compile : (inspect ? JavacAction::Inspect : JavacAction::Lexer);
                 continue;
             }
 

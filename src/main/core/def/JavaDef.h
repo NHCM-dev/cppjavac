@@ -5,8 +5,10 @@
 #ifndef JAVACOMPILER_JAVADEF_H
 #define JAVACOMPILER_JAVADEF_H
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace javac
@@ -168,7 +170,26 @@ namespace javac
 
     // Looks up keywords and fixed literal spellings. The caller checks
     // the language level and decides whether a contextual word is a keyword in its current context.
-    [[nodiscard]] const JavaKeyword* findKeyword(std::string_view spelling);
+    [[nodiscard]]
+    const JavaKeyword* findKeyword(std::string_view spelling);
+
+    [[nodiscard]]
+    const JavaKeyword* findKeywordUtf16(std::u16string_view word);
+
+    // The narrow overload checks ASCII. The UTF-16 overload uses Java 8 Unicode rules.
+    [[nodiscard]] bool hasValidIdentifierCharacters(std::string_view name, bool allowNumericStart = false);
+    [[nodiscard]] bool hasValidIdentifierCharacters(std::u16string_view name, bool allowNumericStart = false);
+    [[nodiscard]] std::size_t getJavaIdentifierLength(std::u16string_view source, bool allowNumericStart = false);
+
+    // JVM class-file name syntax. The input is assumed to be decoded text.
+    // Class names use '/' between components, e.g. java/lang/String.
+    [[nodiscard]] bool isValidJvmInternalClassName(std::string_view name);
+    [[nodiscard]] bool isValidJvmInternalClassName(std::u16string_view name);
+    [[nodiscard]] bool isValidJvmFieldName(std::string_view name);
+    [[nodiscard]] bool isValidJvmFieldName(std::u16string_view name);
+    // Ordinary method names exclude the special names <init> and <clinit>.
+    [[nodiscard]] bool isValidJvmOrdinaryMethodName(std::string_view name);
+    [[nodiscard]] bool isValidJvmOrdinaryMethodName(std::u16string_view name);
 }
 
 #endif //JAVACOMPILER_JAVADEF_H

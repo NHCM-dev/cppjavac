@@ -5,8 +5,8 @@
 #ifndef JAVACOMPILER_MATHUTIL_H
 #define JAVACOMPILER_MATHUTIL_H
 
+#include <cstdint>
 #include <string_view>
-#include <stdexcept>
 
 namespace jcutils
 {
@@ -16,6 +16,14 @@ namespace jcutils
      * @return parsed integer
      */
     int parseInt(std::string_view str);
+
+    // Check Java literal syntax without converting the value or checking its range.
+    [[nodiscard]] bool isInteger(std::string_view str);
+    [[nodiscard]] bool isInteger(std::u16string_view str);
+    [[nodiscard]] bool isFloat(std::string_view str);
+    [[nodiscard]] bool isFloat(std::u16string_view str);
+
+    [[nodiscard]] uint64_t getMSTime();
 
 } // jcutils
 

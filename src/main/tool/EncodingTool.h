@@ -1,0 +1,13 @@
+//
+// Created by NHCM on 2026/11/22.
+//
+
+#ifndef JAVACOMPILER_ENCODINGTOOL_H
+#define JAVACOMPILER_ENCODINGTOOL_H
+
+
+class EncodingTool
+{};
+
+
+#endif //JAVACOMPILER_ENCODINGTOOL_H

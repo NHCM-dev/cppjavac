@@ -4,6 +4,7 @@
 
 #include "JavaCompiler.h"
 
+#include "Compiler.h"
 #include "cli/ConfigParser.h"
 #include "util/DataUtil.h"
 #include "util/PrintUtil.h"
@@ -56,8 +57,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    jcutils::printlnWarningBy("Not implemented program");
+    int exitCode = javac::Compiler::run();
 
     delete javac::config;
-    return 0;
+
+    return exitCode;
 }

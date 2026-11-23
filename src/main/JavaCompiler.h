@@ -17,6 +17,9 @@ namespace javac
     inline std::vector<std::string> args;
     inline JavacConfig* config = nullptr;
 
+    inline uint64_t startTime = 0;
+    inline uint64_t endTime = 0;
+
     inline std::string version =
 R"(
 javac (Simple Java Compiler) for Java 8
@@ -34,27 +37,33 @@ Usage: javac <options> [source files]
 
 Required options:
 
-    -c, --compile                                   Compile input source files into class files and generate output
-    -i, --inspect                                   Only test errors and warning of compiling, without generating output
+    -c, --compile                  Compile source files into class files
+    -i, --inspect                  Check for errors and warnings without
+                                   generating output
+    -l, --lexer                    Only generate lexer output
 
 Options:
 
-    -ex, --extension:{<name[,name...]>:all}                 Enable compiler extensions
-    -s, --source-path <path>                                Specify source file input directory
-    -o, --output-path <path>                                Specify class file output directory directory
-    -cp, --class-path <path>                                Specify the use of classpath directory when compiling
-    -g, --generate-debug:{lines,vars,source:none}           Generate debug information
-    -h, --help                                              Print this help message
-    -v, --verbose                                           Print debug information when compiling
+    -ex, --extension:{<name[,name...]>:all}
+                                   Enable compiler extensions
+    -s, --source-path <path>       Set the source file directory
+    -o, --output-path <path>       Set the class file output directory
+    -cp, --class-path <path>       Set the classpath directory
+    -g, --generate-debug:{lines,vars,source:none}
+                                   Generate debug information
+    -h, --help                     Print this help message
+    -v, --verbose                  Print debug information while compiling
 
-    --list-extensions                                       List all current compiler extensions
-    --source <language level>                               Specify source file language level capability
-    --target <language level>                               Specify output class file language level capability
-    --encoding <encode>                                     Specify source file text encoding
-    --nowarn                                                Disable warning when compiling
-    --version                                               Print current program version
+    --list-extensions              List available compiler extensions
+    --source <language level>      Set the source language level
+    --target <language level>      Set the target class file level
+    --encoding <encode>            Set the source file encoding
+    --nowarn                       Suppress compiler warnings
+    --version                      Print the compiler version
 
-    [source files]                                          Specify source file inputs
+Arguments:
+
+    [source files]                 Source files to compile or inspect
 
 )";
 }
