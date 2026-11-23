@@ -9,6 +9,7 @@
 #include "core/JavacConfig.h"
 #include "lexer/LexerDef.h"
 #include "util/DataUtil.h"
+#include "util/FileUtil.h"
 
 namespace javac
 {
@@ -70,6 +71,8 @@ namespace javac
 
         Path& outputPath();
         bool putFileToWrite(const Path& filePath, const ByteArray& data);
+        Path getWritePath(const Path& filePath);
+        Path getWritePath(const Path& filePath, const std::string& newExtension);
 
         CompileRtData* compileRtData = nullptr;
         JavacConfig& compilerConfig;

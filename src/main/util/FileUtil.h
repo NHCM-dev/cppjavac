@@ -5,6 +5,8 @@
 #ifndef JAVACOMPILER_FILEUTIL_H
 #define JAVACOMPILER_FILEUTIL_H
 
+#include <string>
+
 #include "main/core/CoreDef.h"
 
 namespace jcutils
@@ -20,6 +22,9 @@ namespace jcutils
 
     [[nodiscard]]
     Path changeExtension(Path path, const Path& extension);
+
+    [[nodiscard]]
+    std::string getExtension(const Path& path);
 } // jcutils
 
 #endif //JAVACOMPILER_FILEUTIL_H

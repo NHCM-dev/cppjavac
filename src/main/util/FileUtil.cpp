@@ -28,4 +28,10 @@ namespace jcutils
         path.replace_extension(extension);
         return path;
     }
+
+    std::string getExtension(const Path& path)
+    {
+        const auto extension = path.extension().string();
+        return std::string(extension.begin(), extension.end());
+    }
 } // jcutils

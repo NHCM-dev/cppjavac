@@ -64,6 +64,21 @@ namespace javac
         return compileRtData->filesToWrite.try_emplace(fs::absolute(filePath), data).second;
     }
 
+    Path Compiler::getWritePath(const Path& filePath)
+    {
+        Path writePath = jcutils::joinAbsolutePath(outputPath(), filePath.filename());
+        Path* parentPath = getParentPath(filePath);
+        if (parentPath)
+        {
+            writePath = jcutils::joinAbsolutePath(outputPath(), jcutils::getRelativePath(filePath, *parentPath));
+        }
+        return writePath;
+    }
+    Path Compiler::getWritePath(const Path& filePath, const std::string& newExtension)
+    {
+        return jcutils::changeExtension(getWritePath(filePath), newExtension);
+    }
+
     int Compiler::compile()
     {
         jcutils::printlnErrorBy("Compile is not implemented");
@@ -139,13 +154,7 @@ namespace javac
             sourceDisplay += u"\n\n===Lexer tokens===\n\n";
             sourceDisplay += EncodingTool::utf8ToUtf16(tokenDisplay);
 
-            Path writePath = jcutils::joinAbsolutePath(outputPath(), file.filename());
-            Path* parentPath = getParentPath(file);
-            if (parentPath)
-            {
-                writePath = jcutils::joinAbsolutePath(outputPath(), jcutils::getRelativePath(file, *parentPath));
-            }
-            putFileToWrite(writePath, std::vector(
+            putFileToWrite(getWritePath(file, "javal"), std::vector(
             reinterpret_cast<const std::byte*>(sourceDisplay.data()),
             reinterpret_cast<const std::byte*>(sourceDisplay.data() + sourceDisplay.size())
             ));
