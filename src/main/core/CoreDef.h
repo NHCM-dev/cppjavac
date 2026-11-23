@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <vector>
 #include <set>
+#include <stdexcept>
 
 #include "def/TextEncoding.h"
 #include "def/JavaDef.h"

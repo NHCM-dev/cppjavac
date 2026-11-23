@@ -4,13 +4,55 @@
 
 #include "Lexer.h"
 
-#include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 #include "main/util/MathUtil.h"
 
 namespace javac
 {
+    static std::u16string translateUnicodeEscapes(std::u16string_view input,
+        std::vector<std::size_t>& sourceOffsets)
+    {
+        constexpr std::u16string_view hexDigits = u"0123456789abcdefABCDEF";
+        std::u16string translated;
+        translated.reserve(input.size());
+        sourceOffsets.reserve(input.size());
+        bool oddBackslashes = false;
+        for (std::size_t offset = 0; offset < input.size();)
+        {
+            const std::size_t start = offset;
+            char16_t ch = input[offset++];
+            if (ch == u'\\' && !oddBackslashes && offset < input.size() && input[offset] == u'u')
+            {
+                while (offset < input.size() && input[offset] == u'u')
+                {
+                    ++offset;
+                }
+                ch = 0;
+                for (int digit = 0; digit < 4; ++digit)
+                {
+                    const auto value = offset < input.size() ? hexDigits.find(input[offset]) : hexDigits.npos;
+                    if (value == hexDigits.npos)
+                    {
+                        throw std::invalid_argument("Invalid Unicode escape at UTF-16 offset " + std::to_string(start));
+                    }
+                    ch = static_cast<char16_t>((ch << 4) | (value < 16 ? value : value - 6));
+                    ++offset;
+                }
+                // The escape ends in a raw hex digit, even when its value is a backslash.
+                oddBackslashes = false;
+            }
+            else
+            {
+                oddBackslashes = ch == u'\\' && !oddBackslashes;
+            }
+            translated.push_back(ch);
+            sourceOffsets.push_back(start);
+        }
+        return translated;
+    }
+
     Lexer::Lexer(std::u16string_view sourceCode, std::set<JavacExtension> extensions,
         LangLevel sourceLangLevel)
         : sourceCode(sourceCode), extensions(std::move(extensions)), sourceLangLevel(sourceLangLevel)
@@ -25,20 +67,6 @@ namespace javac
     {
         tokens.emplace_back(type, tokenBuffer, tokenStart, symbol, keyword, invalidReason, canBeIdentifier);
         tokenBuffer.clear();
-    }
-
-    std::span<const char16_t> Lexer::readNextX(std::size_t startOffset, std::size_t length)
-    {
-        const std::size_t sourceSize = sourceCode.size();
-
-        if (startOffset >= sourceSize)
-        {
-            return {};
-        }
-
-        const std::size_t amountToRead = std::min(length, sourceSize - startOffset);
-
-        return {sourceCode.data() + startOffset, amountToRead};
     }
 
     std::vector<Token> Lexer::lex(bool spaceAndLine, bool comment)
@@ -56,8 +84,19 @@ namespace javac
 
         std::size_t literalLength = 0;
         bool invalidEscape = false;
-        const std::size_t sourceSize = sourceCode.size();
-        const std::u16string_view source = sourceCode;
+        std::vector<std::size_t> sourceOffsets;
+        std::u16string translated;
+        std::u16string_view source = sourceCode;
+        if (source.find(u"\\u") != std::u16string_view::npos)
+        {
+            translated = translateUnicodeEscapes(source, sourceOffsets);
+            source = translated;
+        }
+        if (source.ends_with(u'\x001A'))
+        {
+            source.remove_suffix(1);
+        }
+        const std::size_t sourceSize = source.size();
 
         const auto isDecimalDigit = [](char16_t ch) { return ch >= u'0' && ch <= u'9'; };
         const auto isHexDigit = [&](char16_t ch) {
@@ -82,8 +121,8 @@ namespace javac
 
         for (; offset < sourceSize; ++offset)
         {
-            const char16_t currentChar = sourceCode[offset];
-            const char16_t nextChar = offset + 1 < sourceSize ? sourceCode[offset + 1] : u'\0';
+            const char16_t currentChar = source[offset];
+            const char16_t nextChar = offset + 1 < sourceSize ? source[offset + 1] : u'\0';
             const bool newLine = currentChar == u'\n' || currentChar == u'\r';
 
             if (newLine && needEndComment && needEndCommentType == TokenType::LineComment)
@@ -110,7 +149,7 @@ namespace javac
 
             if (tokenBuffer.empty())
             {
-                tokenStart = {offset, line, column + 1};
+                tokenStart = {sourceOffsets.empty() ? offset : sourceOffsets[offset], line, column + 1};
             }
             tokenBuffer += currentChar;
             ++column;
@@ -153,7 +192,7 @@ namespace javac
                         const std::size_t limit = currentChar <= u'3' ? 3 : 2;
                         std::size_t length = 1;
                         while (length < limit && offset + length < sourceSize
-                            && sourceCode[offset + length] >= u'0' && sourceCode[offset + length] <= u'7')
+                            && source[offset + length] >= u'0' && source[offset + length] <= u'7')
                         {
                             ++length;
                         }
@@ -208,7 +247,7 @@ namespace javac
             if (isWhitespace(currentChar))
             {
                 std::size_t end = offset + 1;
-                while (end < sourceSize && isWhitespace(sourceCode[end]))
+                while (end < sourceSize && isWhitespace(source[end]))
                 {
                     ++end;
                 }
@@ -244,7 +283,7 @@ namespace javac
             if (currentChar == u'/' && nextChar == u'*')
             {
                 needEndComment = true;
-                needEndCommentType = offset + 2 < sourceSize && sourceCode[offset + 2] == u'*'
+                needEndCommentType = offset + 2 < sourceSize && source[offset + 2] == u'*'
                     ? TokenType::JavadocComment : TokenType::BlockComment;
                 appendRest(2);
                 continue;
@@ -348,12 +387,12 @@ namespace javac
             }
 
             constexpr std::size_t maxSymbolLength = 4; // >>>=
-            const auto symbolText = readNextX(offset, maxSymbolLength);
+            const auto symbolText = remaining.substr(0, maxSymbolLength);
             std::size_t length = symbolText.size();
             std::optional<SymbolType> symbol;
             for (; length > 0; --length)
             {
-                symbol = findSymbol(std::u16string_view(symbolText.data(), length));
+                symbol = findSymbol(symbolText.substr(0, length));
                 if (symbol)
                 {
                     break;
@@ -395,7 +434,7 @@ namespace javac
             }
         }
 
-        tokenStart = {offset, line, column + 1};
+        tokenStart = {sourceCode.size(), line, column + 1};
         pushToken(TokenType::EndOfFile);
 
         return std::move(tokens);

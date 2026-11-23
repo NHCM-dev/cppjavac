@@ -70,6 +70,8 @@ namespace javac
         Path* getParentPath(const Path& sourceFilePath);
 
         Path& outputPath();
+        TextEncoding& encoding();
+
         bool putFileToWrite(const Path& filePath, const ByteArray& data);
         Path getWritePath(const Path& filePath);
         Path getWritePath(const Path& filePath, const std::string& newExtension);

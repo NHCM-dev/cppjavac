@@ -7,11 +7,11 @@
 
 #include "LexerDef.h"
 #include "main/core/def/Extension.h"
+#include <stdexcept>
 
 #include <cstddef>
 #include <optional>
 #include <set>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,13 +48,17 @@ namespace javac
             std::optional<InvalidTokenType> invalidReason = std::nullopt,
             bool canBeIdentifier = false);
 
-        std::span<const char16_t> readNextX(std::size_t startOffset, std::size_t length);
-
     public:
         Lexer(std::u16string_view sourceCode, std::set<JavacExtension> extensions = {},
             LangLevel sourceLangLevel = LangLevel::Eight);
 
-        // Include comment tokens when comment is true. Unterminated comments always produce Invalid.
+        /**
+         * Include comment tokens when comment is true. Unterminated comments always produce Invalid
+         * @throws std::invalid_argument for malformed Unicode escapes before tokenization
+         * @param spaceAndLine Process and produce space and new line tokens
+         * @param comment Process and produce comment tokens
+         * @return return a vector of tokens
+         */
         std::vector<Token> lex(bool spaceAndLine = false, bool comment = false);
     };
 } // javac

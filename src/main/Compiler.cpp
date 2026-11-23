@@ -5,6 +5,7 @@
 #include "Compiler.h"
 
 #include <cstdio>
+#include <stdexcept>
 
 #include "JavaCompiler.h"
 #include "core/JavacConfig.h"
@@ -59,6 +60,11 @@ namespace javac
         return compilerConfig.outputDir;
     }
 
+    TextEncoding& Compiler::encoding()
+    {
+        return compilerConfig.encoding;
+    }
+
     bool Compiler::putFileToWrite(const Path& filePath, const ByteArray& data)
     {
         return compileRtData->filesToWrite.try_emplace(fs::absolute(filePath), data).second;
@@ -91,27 +97,42 @@ namespace javac
     }
     int Compiler::lex()
     {
-        jcutils::printlnWarningBy("This lex feature is currently just an experiment");
+        jcutils::printlnWarningBy("This lex feature is currently experimental");
+        bool hasErrors = false;
         for (const auto& file : compileRtData->filesToCompile)
         {
-            std::string str = FileIOTool::readUtf8(file);
-            std::u16string u16str = EncodingTool::utf8ToUtf16(str);
-            Lexer lexer = Lexer(u16str);
+            const auto utf8Path = file.u8string();
+            const std::string displayPath(utf8Path.begin(), utf8Path.end());
 
             if (verbose())
             {
-                jcutils::printlnDebugBy("Lexing file \"" + file.string() + "\"");
+                jcutils::printlnDebugBy("Lexing file \"" + displayPath + "\"");
             }
 
-            std::vector<Token> tokens = lexer.lex(true, true);
-
-            std::u16string sourceDisplay = {};
+            std::u16string sourceDisplay;
+            std::vector<Token> tokens;
+            try
+            {
+                sourceDisplay = EncodingTool::decodeToUtf16(FileIOTool::readUtf8(file), encoding());
+                Lexer lexer(sourceDisplay, compilerConfig.extensions, compilerConfig.sourceLangLevel);
+                tokens = lexer.lex(true, true);
+            }
+            catch (const std::invalid_argument& error)
+            {
+                noticeError(displayPath + ": " + error.what());
+                hasErrors = true;
+                continue;
+            }
+            catch (const std::ios_base::failure& error)
+            {
+                noticeError(error.what());
+                hasErrors = true;
+                continue;
+            }
             std::string tokenDisplay {};
 
             for (const auto& token : tokens)
             {
-                sourceDisplay+=token.content;
-
                 if (token.tokenType != TokenType::Whitespace && token.tokenType != TokenType::NewLine)
                 {
                     constexpr std::string_view typeNames[] = {
@@ -144,10 +165,25 @@ namespace javac
                                 }
                         }
                     }
-                    std::string output = std::to_string(token.location.line) + ':'
-                        + std::to_string(token.location.column) + ' ';
+                    const std::string position = std::to_string(token.location.line) + ':'
+                        + std::to_string(token.location.column);
+                    std::string output = position + ' ';
                     output += typeNames[static_cast<std::size_t>(token.tokenType)];
                     output += " \"" + content + '"';
+                    if (token.invalidReason)
+                    {
+                        constexpr std::string_view reasons[] = {
+                            "Line break in string literal", "Line break in character literal",
+                            "Unterminated escape in string literal", "Unterminated escape in character literal",
+                            "Unterminated string literal", "Unterminated character literal", "Unterminated block comment",
+                            "Too many characters in character literal", "Unrecognized token", "Empty character literal",
+                            "Invalid escape sequence", "Invalid numeric literal"
+                        };
+                        const std::string reason(reasons[static_cast<std::size_t>(*token.invalidReason)]);
+                        noticeError(displayPath + ':' + position + ": " + reason);
+                        output += " (" + reason + ')';
+                        hasErrors = true;
+                    }
                     tokenDisplay += output + "\n";
                 }
             }
@@ -160,7 +196,7 @@ namespace javac
             ));
         }
 
-        return 0;
+        return hasErrors ? -1 : 0;
     }
 
     bool Compiler::verbose() const

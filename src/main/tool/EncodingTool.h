@@ -6,12 +6,14 @@
 #define JAVACOMPILER_ENCODINGTOOL_H
 #include <string>
 
+#include "main/core/def/TextEncoding.h"
 
 class EncodingTool
 {
 public:
     // Throws std::invalid_argument for malformed UTF-8.
     static std::u16string utf8ToUtf16(const std::string& string);
+    static std::u16string decodeToUtf16(const std::string& bytes, TextEncoding originalEncoding);
 };
 
 

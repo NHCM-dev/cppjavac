@@ -17,11 +17,14 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.inc")
-add_executable(JavaCompiler ${JavaCompiler_SOURCES}
-        src/main/util/FileUtil.cpp
-        src/main/util/FileUtil.h)
+add_executable(JavaCompiler ${JavaCompiler_SOURCES})
 target_include_directories(JavaCompiler PRIVATE src)
 set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
+
+if(NOT WIN32)
+    find_package(Iconv REQUIRED)
+    target_link_libraries(JavaCompiler PRIVATE Iconv::Iconv)
+endif()
 
 if(MINGW)
     target_link_options(JavaCompiler PRIVATE -static)
