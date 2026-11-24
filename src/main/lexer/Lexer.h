@@ -53,7 +53,7 @@ namespace javac
             LangLevel sourceLangLevel = LangLevel::Eight);
 
         /**
-         * Include comment tokens when comment is true. Unterminated comments always produce Invalid
+         * Tokenize java source code and generate a vector of tokens
          * @throws std::invalid_argument for malformed Unicode escapes before tokenization
          * @param spaceAndLine Process and produce space and new line tokens
          * @param comment Process and produce comment tokens
