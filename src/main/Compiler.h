@@ -13,6 +13,8 @@
 
 namespace javac
 {
+    inline std::string_view LEXER = "lexer";
+
     struct CompileFile
     {
         CompileFile(const Path& path)
@@ -64,7 +66,7 @@ namespace javac
     {
         void printTerminate();
 
-        void noticeError(const std::string& error);
+        void noticeError(const std::string& error, std::string_view owner = {});
         void noticeWarning(const std::string& warning);
         bool addParentPath(const Path& sourcePath, const Path& parentPath);
         Path* getParentPath(const Path& sourceFilePath);

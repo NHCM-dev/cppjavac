@@ -5,7 +5,7 @@
 #ifndef JAVACOMPILER_JAVACCONFIG_H
 #define JAVACOMPILER_JAVACCONFIG_H
 
-#include "CoreDef.h"
+#include "DataDef.h"
 #include "def/Extension.h"
 
 namespace javac

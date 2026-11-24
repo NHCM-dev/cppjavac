@@ -9,7 +9,11 @@
 #include "util/DataUtil.h"
 #include "util/PrintUtil.h"
 
+#ifdef _WIN32
+int wmain(int argc, wchar_t** argv)
+#else
 int main(int argc, char** argv)
+#endif
 {
     if (argc <= 1)
     {
@@ -19,7 +23,11 @@ int main(int argc, char** argv)
 
     for (int i = 1; i < argc; i++)
     {
+        #ifdef _WIN32
+        javac::args.emplace_back(Path(fs::path(argv[i])).string());
+        #else
         javac::args.emplace_back(argv[i]);
+        #endif
     }
 
     if (jcutils::contains(javac::args, "-h")
@@ -40,7 +48,7 @@ int main(int argc, char** argv)
         jcutils::printlnInfoBy("List of currently supported compiler extensions");
         for (const auto& info : javac::listExtensions())
         {
-            jcutils::println(info.name, jcutils::PrintColor::None);
+            jcutils::println(info.name);
         }
         return 0;
     }
@@ -50,6 +58,10 @@ int main(int argc, char** argv)
     {
         parsedConfig = javac::ConfigParser::parseConfig(javac::args);
         javac::config = parsedConfig;
+    } catch (const fs::filesystem_error& e)
+    {
+        jcutils::printlnErrorBy(e.what());
+        return -1;
     } catch (std::invalid_argument& e)
     {
         delete parsedConfig;

@@ -6,11 +6,10 @@
 
 #include <fstream>
 
-std::string FileIOTool::readUtf8(Path path)
+std::string FileIOTool::readUtf8(const Path& path)
 {
-    const auto fileName = path.u8string();
-    const std::string displayPath(fileName.begin(), fileName.end());
-    std::ifstream input(path, std::ios::binary);
+    const std::string displayPath = path.string();
+    std::ifstream input(path.fsPath(), std::ios::binary);
     if (!input)
     {
         throw std::ios_base::failure("Cannot open file: " + displayPath);
@@ -30,7 +29,7 @@ std::string FileIOTool::readUtf8(Path path)
     return result;
 }
 
-int FileIOTool::writeFile(const fs::path& path, const std::vector<std::byte>& bytes)
+int FileIOTool::writeFile(const Path& path, const std::vector<std::byte>& bytes)
 {
     const Path parent = path.parent_path();
     if (path.has_filename() && !parent.empty())
@@ -43,7 +42,7 @@ int FileIOTool::writeFile(const fs::path& path, const std::vector<std::byte>& by
         }
     }
 
-    std::ofstream file(path, std::ios::binary);
+    std::ofstream file(path.fsPath(), std::ios::binary);
 
     if (!file)
     {

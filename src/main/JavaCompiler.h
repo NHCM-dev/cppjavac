@@ -73,6 +73,4 @@ Arguments:
 )";
 }
 
-int main(int argc, char** argv);
-
 #endif //JAVACOMPILER_JAVACOMPILER_H

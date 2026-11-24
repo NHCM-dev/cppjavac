@@ -31,7 +31,6 @@ namespace jcutils
 
     std::string getExtension(const Path& path)
     {
-        const auto extension = path.extension().string();
-        return std::string(extension.begin(), extension.end());
+        return path.extension().string();
     }
 } // jcutils

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "main/core/CoreDef.h"
+#include "main/core/DataDef.h"
 
 namespace jcutils
 {

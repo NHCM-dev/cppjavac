@@ -26,22 +26,22 @@ namespace javac
 
     void Compiler::printTerminate()
     {
-        jcutils::printlnErrorBy("Compiler terminated. " +
+        jcutils::printlnErrorCustom("Compiler terminated. " +
                 std::to_string(compileRtData->errors.size()) + " errors occurred, " +
                 std::to_string(compileRtData->warnings.size()) + " warnings generated.");
     }
 
-    void Compiler::noticeError(const std::string& error)
+    void Compiler::noticeError(const std::string& error, std::string_view owner)
     {
         compileRtData->errors.push_back(error);
-        jcutils::printlnErrorBy(error);
+        jcutils::printlnErrorCustom(error, owner);
     }
     void Compiler::noticeWarning(const std::string& warning)
     {
         if (!compilerConfig.nowarn)
         {
             compileRtData->warnings.push_back(warning);
-            jcutils::printlnWarningBy(warning);
+            jcutils::printlnWarningCustom(warning);
         }
     }
 
@@ -87,26 +87,25 @@ namespace javac
 
     int Compiler::compile()
     {
-        jcutils::printlnErrorBy("Compile is not implemented");
+        jcutils::printlnErrorCustom("Compile is not implemented");
         return -1;
     }
     int Compiler::inspect()
     {
-        jcutils::printlnErrorBy("Inspect is not implemented");
+        jcutils::printlnErrorCustom("Inspect is not implemented");
         return -1;
     }
     int Compiler::lex()
     {
-        jcutils::printlnWarningBy("This lex feature is currently experimental");
+        jcutils::printlnWarningCustom("This lex feature is currently experimental", LEXER);
         bool hasErrors = false;
         for (const auto& file : compileRtData->filesToCompile)
         {
-            const auto utf8Path = file.u8string();
-            const std::string displayPath(utf8Path.begin(), utf8Path.end());
+            const std::string displayPath = file.string();
 
             if (verbose())
             {
-                jcutils::printlnDebugBy("Lexing file \"" + displayPath + "\"");
+                jcutils::printlnDebugCustom("Lexing file \"" + displayPath + "\"", LEXER);
             }
 
             std::u16string sourceDisplay;
@@ -119,13 +118,13 @@ namespace javac
             }
             catch (const std::invalid_argument& error)
             {
-                noticeError(displayPath + ": " + error.what());
+                noticeError(displayPath + ": " + error.what(), LEXER);
                 hasErrors = true;
                 continue;
             }
             catch (const std::ios_base::failure& error)
             {
-                noticeError(error.what());
+                noticeError(error.what(), LEXER);
                 hasErrors = true;
                 continue;
             }
@@ -180,7 +179,7 @@ namespace javac
                             "Invalid escape sequence", "Invalid numeric literal"
                         };
                         const std::string reason(reasons[static_cast<std::size_t>(*token.invalidReason)]);
-                        noticeError(displayPath + ':' + position + ": " + reason);
+                        noticeError(displayPath + ':' + position + ": " + reason, LEXER);
                         output += " (" + reason + ')';
                         hasErrors = true;
                     }
@@ -222,14 +221,14 @@ namespace javac
                     {
                         if (verbose())
                         {
-                            jcutils::printlnDebugBy("Adding file \"" + absolutePath.string() + "\"");
+                            jcutils::printlnDebugCustom("Adding file \"" + absolutePath.string() + "\"");
                         }
                     }
                 } else if (is_directory(absolutePath))
                 {
                     if (verbose())
                     {
-                        jcutils::printlnDebugBy("Scanning directory \"" + absolutePath.string() + "\"");
+                        jcutils::printlnDebugCustom("Scanning directory \"" + absolutePath.string() + "\"");
                     }
                     for (const auto& entry : fs::recursive_directory_iterator(absolutePath))
                     {
@@ -241,7 +240,7 @@ namespace javac
                                 addParentPath(entryAbsolutePath, absolutePath);
                                 if (verbose())
                                 {
-                                    jcutils::printlnDebugBy("Adding file \"" + entryAbsolutePath.string() + "\"");
+                                    jcutils::printlnDebugCustom("Adding file \"" + entryAbsolutePath.string() + "\"");
                                 }
                             }
                         }
@@ -255,7 +254,7 @@ namespace javac
         }
         if (verbose())
         {
-            jcutils::printlnInfoBy("Scanned and found " + std::to_string(compileRtData->filesToCompile.size()) + " file(s) to compile");
+            jcutils::printlnInfoCustom("Scanned and found " + std::to_string(compileRtData->filesToCompile.size()) + " file(s) to compile");
         }
         return true;
     }
@@ -279,7 +278,7 @@ namespace javac
                 case 0:
                     if (verbose())
                     {
-                        jcutils::printlnDebugBy("Successfully saved file \"" + path2Bytes.first.string() + "\"");
+                        jcutils::printlnDebugCustom("Successfully saved file \"" + path2Bytes.first.string() + "\"");
                     }
                     break;
                 default:
@@ -294,7 +293,7 @@ namespace javac
         }
         if (verbose())
         {
-            jcutils::printlnInfoBy("Saved " + std::to_string(compileRtData->filesToWrite.size()) + " file(s)");
+            jcutils::printlnInfoCustom("Saved " + std::to_string(compileRtData->filesToWrite.size()) + " file(s)");
         }
         return true;
     }
@@ -331,7 +330,7 @@ namespace javac
             }
             default:
             {
-                jcutils::printlnErrorBy("Unknown compiler starting action, this should not happen");
+                jcutils::printlnErrorCustom("Unknown compiler starting action, this should not happen");
                 return -1;
             }
         }
@@ -345,7 +344,7 @@ namespace javac
 
         endTime = jcutils::getMSTime();
 
-        jcutils::printlnInfoBy("Finished compiling, time took: " + std::to_string((endTime - startTime)) + "ms");
+        jcutils::printlnInfoCustom("Finished compiling, time took: " + std::to_string((endTime - startTime)) + "ms");
 
         return exitCode;
     }

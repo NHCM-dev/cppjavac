@@ -27,5 +27,5 @@ if(NOT WIN32)
 endif()
 
 if(MINGW)
-    target_link_options(JavaCompiler PRIVATE -static)
+    target_link_options(JavaCompiler PRIVATE -static -municode)
 endif()
