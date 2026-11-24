@@ -10,9 +10,22 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace javac
 {
+    using jbyte    = std::int8_t;
+    using jshort   = std::int16_t;
+    using jchar    = char16_t;
+    using jint     = std::int32_t;
+    using jlong    = std::int64_t;
+    using jfloat   = float;
+    using jdouble  = double;
+    using jboolean = bool;
+
+    static_assert(sizeof(jfloat) == 4);
+    static_assert(sizeof(jdouble) == 8);
+
     enum class DebugInfo
     {
         Lines, // Line number
@@ -30,6 +43,36 @@ namespace javac
     };
 
     [[nodiscard]] std::optional<LangLevel> parseLangLevel(int level);
+
+    enum class PrimitiveType : std::uint8_t
+    {
+        Boolean,
+        Byte,
+        Short,
+        Char,
+        Int,
+        Long,
+        Float,
+        Double,
+    };
+
+    enum class FlagType : std::uint8_t
+    {
+        Public,
+        Protected,
+        Private,
+        Abstract,
+        Static,
+        Final,
+        Transient,
+        Volatile,
+        Synchronized,
+        Native,
+        Strictfp,
+        Default,
+        Sealed,
+        NonSealed,
+    };
 
     enum class JavaKeywordKind : std::uint8_t
     {

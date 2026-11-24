@@ -24,10 +24,6 @@ enum class JavacExtension : std::uint8_t
     AllowImplicitVariableTypes,    // Allow type inference beyond standard var
     AllowAutoTypeConversion,       // Allow additional implicit type conversions
 
-    // Classes
-    AllowStaticTopLevelClasses,    // Allow static top-level classes
-    AllowDefaultFieldValues,       // Allow custom default field initializers
-
     // Methods
     AllowOperatorOverloading,      // User-defined operator overloading
     AllowDefaultParameters,        // Default method arguments

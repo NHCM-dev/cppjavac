@@ -20,8 +20,6 @@ namespace javac
             {AllowVariableShadowing, "variable-shadowing"},
             {AllowImplicitVariableTypes, "implicit-variable-types"},
             {AllowAutoTypeConversion, "auto-type-conversion"},
-            {AllowStaticTopLevelClasses, "static-top-level-classes"},
-            {AllowDefaultFieldValues, "default-field-values"},
             {AllowOperatorOverloading, "operator-overloading"},
             {AllowDefaultParameters, "default-parameters"},
             {AllowExtensionMethods, "extension-methods"},

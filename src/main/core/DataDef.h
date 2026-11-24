@@ -51,4 +51,18 @@ public:
     }
 };
 
+struct SourceLocation
+{
+    std::size_t offsetInFile = 0; // UTF-16 offset before Unicode escape translation
+    // Line and column refer to the translated input.
+    std::size_t line = 1;
+    std::size_t column = 1;
+};
+
+struct SourceRange
+{
+    SourceLocation begin;
+    SourceLocation end; // Exclusive
+};
+
 #endif //JAVACOMPILER_DATADEF_H

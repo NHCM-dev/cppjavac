@@ -4,11 +4,11 @@
 
 #ifndef JAVACOMPILER_LEXERDEF_H
 #define JAVACOMPILER_LEXERDEF_H
-#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 
+#include "main/core/DataDef.h"
 #include "main/core/def/JavaDef.h"
 
 namespace javac
@@ -146,14 +146,6 @@ namespace javac
         EmptyCharacterLiteral,
         InvalidEscapeSequence,
         InvalidNumericLiteral
-    };
-
-    struct SourceLocation
-    {
-        std::size_t offsetInFile = 0; // UTF-16 offset before Unicode escape translation
-        // Line and column refer to the translated input.
-        std::size_t line = 1;
-        std::size_t column = 1;
     };
 
     struct Token

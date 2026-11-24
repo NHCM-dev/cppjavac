@@ -15,25 +15,6 @@ namespace javac
 {
     inline std::string_view LEXER = "lexer";
 
-    struct CompileFile
-    {
-        CompileFile(const Path& path)
-        : absolutePath(fs::absolute(path)), sourcePath(std::nullopt)
-        {}
-
-        CompileFile(const Path& path, const Path& srcPath)
-       : absolutePath(fs::absolute(path)), sourcePath(srcPath)
-        {}
-
-        Path absolutePath;
-        std::optional<Path> sourcePath;
-
-        bool operator==(const CompileFile& another) const
-        {
-            return this->absolutePath == another.absolutePath;
-        }
-    };
-
     struct CompileRtData
     {
         std::vector<std::string> errors;

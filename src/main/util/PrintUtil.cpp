@@ -5,12 +5,11 @@
 #include "PrintUtil.h"
 
 #include "main/JavaCompiler.h"
+#include "main/tool/EncodingTool.h"
 
 #include <iostream>
 
 #ifdef _WIN32
-#include "main/tool/EncodingTool.h"
-
 #include <windows.h>
 #endif
 
@@ -36,7 +35,7 @@ namespace jcutils
     static void writeColored(std::ostream& output, std::string_view str, PrintColor color)
     {
         #ifdef _WIN32
-        const HANDLE console = GetStdHandle(&output == &std::cerr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+        HANDLE console = GetStdHandle(&output == &std::cerr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
         DWORD mode;
         if (!str.empty() && GetConsoleMode(console, &mode))
         {
@@ -45,7 +44,7 @@ namespace jcutils
                 const auto wideText = EncodingTool::utf8ToUtf16(formatColor(str, color));
                 output.flush();
                 DWORD written;
-                if (WriteConsoleW(console, wideText.data(), static_cast<DWORD>(wideText.size()), &written, nullptr))
+                if (WriteConsoleW(console, wideText.data(), wideText.size(), &written, nullptr))
                 {
                     return;
                 }
