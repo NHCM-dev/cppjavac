@@ -97,9 +97,9 @@ namespace javac
         // Comparison Operators
         EqualEqual,                // ==
         BangEqual,                 // !=
-        LeftAngleBracket,          // <
+        LAngleBracket,             // <
         LessEqual,                 // <=
-        RightAngleBracket,         // >
+        RAngleBracket,             // >
         GreaterEqual,              // >=
 
         // Logical / Bitwise Operators

@@ -80,9 +80,23 @@ namespace javac
         return decl;
     }
 
-    ClassDecl Parser::parseClassDecl()
+    ClassDecl Parser::parseClassDecl(std::vector<ModifierFlag> modifiers)
     {
+        expectKeyword(CLASS);
 
+        ClassDecl decl;
+        decl.modifiers = std::move(modifiers);
+        decl.name = expectIdentifier().content;
+
+        if (matchSymbol(SymbolType::LAngleBracket))
+        {
+            std::vector<GenericParameter> generics = parseGenericParameters();
+            decl.typeParameters = std::move(generics);
+        }
+
+        
+
+        return decl;
     }
     MethodDecl Parser::parseMethodDecl()
     {
@@ -100,9 +114,44 @@ namespace javac
             annotation.name += u'.';
             annotation.name += expectIdentifier().content;
         }
+
+        //TODO: parse annotation arg
     }
 
-    ParenExpr parseParenthesis()
+    AnnotationArg Parser::parseAnnotationArg()
+    {
+
+    }
+
+    std::vector<GenericParameter> Parser::parseGenericParameters()
+    {
+        expectSymbol(SymbolType::LAngleBracket);
+
+        std::vector<GenericParameter> parameters;
+
+        do
+        {
+            GenericParameter parameter;
+            parameter.name = expectIdentifier().content;
+
+            if (matchKeyword(EXTENDS))
+            {
+                do
+                {
+                    parameter.bounds.push_back(parseTypeNode());
+                }
+                while (matchSymbol(SymbolType::Ampersand));
+            }
+
+            parameters.push_back(std::move(parameter));
+        }
+        while (matchSymbol(SymbolType::Comma));
+
+        expectSymbol(SymbolType::RAngleBracket);
+        return parameters;
+    }
+
+    TypeNode Parser::parseTypeNode()
     {
 
     }

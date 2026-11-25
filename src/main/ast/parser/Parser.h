@@ -122,11 +122,14 @@ namespace javac
          * @return the constructed package declaration
          */
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
-        ClassDecl parseClassDecl();
+        ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {});
         MethodDecl parseMethodDecl();
         Annotation parseAnnotation();
 
-        ParenExpr parseParenthesis();
+        AnnotationArg parseAnnotationArg();
+        std::vector<GenericParameter> parseGenericParameters();
+
+        TypeNode parseTypeNode();
 
         void parseOrdinary();
         void parseModular();
