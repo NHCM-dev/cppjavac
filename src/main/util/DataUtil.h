@@ -66,6 +66,8 @@ namespace jcutils
     std::vector<std::string_view> splitLines(std::string_view str);
 
     std::string toLower(std::string str);
+    bool hasSpace(std::string_view str);
+    bool hasSpace(std::u16string_view str);
 }
 
 #endif //JAVACOMPILER_DATASETUTIL_H

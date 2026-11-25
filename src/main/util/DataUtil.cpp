@@ -9,16 +9,6 @@
 
 namespace jcutils
 {
-    std::string toLower(std::string str)
-    {
-        std::transform(str.begin(), str.end(), str.begin(),
-            [](unsigned char c) {
-                return static_cast<char>(std::tolower(c));
-            });
-
-        return str;
-    }
-
     std::vector<std::string_view> splitLines(std::string_view str)
     {
         std::vector<std::string_view> lines;
@@ -47,5 +37,31 @@ namespace jcutils
         }
 
         return lines;
+    }
+
+    std::string toLower(std::string str)
+    {
+        std::transform(str.begin(), str.end(), str.begin(),
+            [](unsigned char c) {
+                return static_cast<char>(std::tolower(c));
+            });
+
+        return str;
+    }
+
+    bool hasSpace(std::string_view str)
+    {
+        return std::ranges::any_of(str,[](char16_t c)
+       {
+           return c == u' ' ||c == u'\t' ||c == u'\n' ||c == u'\r' ||c == u'\f';
+       });
+    }
+
+    bool hasSpace(std::u16string_view str)
+    {
+        return std::ranges::any_of(str,[](char16_t c)
+       {
+           return c == u' ' ||c == u'\t' ||c == u'\n' ||c == u'\r' ||c == u'\f';
+       });
     }
 }

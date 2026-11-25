@@ -101,6 +101,11 @@ namespace javac
             return string == str;
         }
 
+        constexpr bool operator==(const JavaKeyword& keyword) const
+        {
+            return string == keyword.string;
+        }
+
         [[nodiscard]]
         constexpr std::string_view getString() const
         {
