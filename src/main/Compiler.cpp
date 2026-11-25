@@ -12,6 +12,7 @@
 #include "lexer/Lexer.h"
 #include "tool/EncodingTool.h"
 #include "tool/FileIoTool.h"
+#include "util/ExceptionUtil.h"
 #include "util/FileUtil.h"
 #include "util/MathUtil.h"
 #include "util/PrintUtil.h"
@@ -26,7 +27,7 @@ namespace javac
 
     void Compiler::printTerminate()
     {
-        jcutils::printlnErrorCustom("Compiler terminated. " +
+        jcutils::printErrorCustom("Compiler terminated. " +
                 std::to_string(compileRtData->errors.size()) + " errors occurred, " +
                 std::to_string(compileRtData->warnings.size()) + " warnings generated.");
     }
@@ -34,14 +35,14 @@ namespace javac
     void Compiler::noticeError(const std::string& error, std::string_view owner)
     {
         compileRtData->errors.push_back(error);
-        jcutils::printlnErrorCustom(error, owner);
+        jcutils::printErrorCustom(error, owner);
     }
     void Compiler::noticeWarning(const std::string& warning)
     {
         if (!compilerConfig.nowarn)
         {
             compileRtData->warnings.push_back(warning);
-            jcutils::printlnWarningCustom(warning);
+            jcutils::printWarningCustom(warning);
         }
     }
 
@@ -85,19 +86,19 @@ namespace javac
         return jcutils::changeExtension(getWritePath(filePath), newExtension);
     }
 
-    int Compiler::compile()
+    bool Compiler::compile()
     {
-        jcutils::printlnErrorCustom("Compile is not implemented");
+        jcutils::printErrorCustom("Compile is not implemented");
         return -1;
     }
-    int Compiler::inspect()
+    bool Compiler::inspect()
     {
-        jcutils::printlnErrorCustom("Inspect is not implemented");
+        jcutils::printErrorCustom("Inspect is not implemented");
         return -1;
     }
-    int Compiler::lex()
+
+    bool Compiler::lex()
     {
-        jcutils::printlnWarningCustom("This lex feature is currently experimental", LEXER);
         bool hasErrors = false;
         for (const auto& file : compileRtData->filesToCompile)
         {
@@ -105,16 +106,70 @@ namespace javac
 
             if (verbose())
             {
-                jcutils::printlnDebugCustom("Lexing file \"" + displayPath + "\"", LEXER);
+                jcutils::printDebugCustom("Lexing file \"" + displayPath + "\"", LEXER);
             }
 
             std::u16string sourceDisplay;
-            std::vector<Token> tokens;
+            TokenStream tokenStream;
             try
             {
                 sourceDisplay = EncodingTool::decodeToUtf16(FileIOTool::readUtf8(file), encoding());
                 Lexer lexer(sourceDisplay, compilerConfig.extensions, compilerConfig.sourceLangLevel);
-                tokens = lexer.lex(true, true);
+                tokenStream = lexer.lex();
+            }
+            catch (const std::invalid_argument& error)
+            {
+                noticeError(displayPath + ": " + error.what());
+                hasErrors = true;
+                continue;
+            }
+            catch (const std::ios_base::failure& error)
+            {
+                noticeError(error.what(), LEXER);
+                hasErrors = true;
+                continue;
+            }
+
+            hasErrors |= reportInvalidTokens(file, sourceDisplay, tokenStream);
+
+            compileRtData->tokenStreams.emplace(file, std::move(tokenStream));
+        }
+
+        return !hasErrors;
+    }
+
+    bool Compiler::reportInvalidTokens(const Path& file, std::u16string_view source, const TokenStream& tokens)
+    {
+        for (const auto& token : tokens.invalidTokens)
+        {
+            const auto message = invalidTokenStr(token->invalidReason.value());
+            jcutils::printDiagnostic(jcutils::DiagnosticSeverity::Error, file, message,
+                jcutils::DiagnosticSite{token->location}, source);
+            compileRtData->errors.emplace_back(message);
+        }
+        return !tokens.invalidTokens.empty();
+    }
+
+    bool Compiler::lexExperimental()
+    {
+        jcutils::printWarningCustom("This lex feature is currently experimental", LEXER);
+        bool hasErrors = false;
+        for (const auto& file : compileRtData->filesToCompile)
+        {
+            const std::string displayPath = file.string();
+
+            if (verbose())
+            {
+                jcutils::printDebugCustom("Lexing file \"" + displayPath + "\"", LEXER);
+            }
+
+            std::u16string sourceDisplay;
+            TokenStream tokenStream;
+            try
+            {
+                sourceDisplay = EncodingTool::decodeToUtf16(FileIOTool::readUtf8(file), encoding());
+                Lexer lexer(sourceDisplay, compilerConfig.extensions, compilerConfig.sourceLangLevel);
+                tokenStream = lexer.lex(true, true);
             }
             catch (const std::invalid_argument& error)
             {
@@ -128,9 +183,10 @@ namespace javac
                 hasErrors = true;
                 continue;
             }
+            hasErrors |= reportInvalidTokens(file, sourceDisplay, tokenStream);
             std::string tokenDisplay {};
 
-            for (const auto& token : tokens)
+            for (const auto& token : tokenStream.tokens)
             {
                 if (token.tokenType != TokenType::Whitespace && token.tokenType != TokenType::NewLine)
                 {
@@ -171,17 +227,9 @@ namespace javac
                     output += " \"" + content + '"';
                     if (token.invalidReason)
                     {
-                        constexpr std::string_view reasons[] = {
-                            "Line break in string literal", "Line break in character literal",
-                            "Unterminated escape in string literal", "Unterminated escape in character literal",
-                            "Unterminated string literal", "Unterminated character literal", "Unterminated block comment",
-                            "Too many characters in character literal", "Unrecognized token", "Empty character literal",
-                            "Invalid escape sequence", "Invalid numeric literal"
-                        };
-                        const std::string reason(reasons[static_cast<std::size_t>(*token.invalidReason)]);
-                        noticeError(displayPath + ':' + position + ": " + reason, LEXER);
-                        output += " (" + reason + ')';
-                        hasErrors = true;
+                        output += " (";
+                        output += invalidTokenStr(*token.invalidReason);
+                        output += ')';
                     }
                     tokenDisplay += output + "\n";
                 }
@@ -195,7 +243,7 @@ namespace javac
             ));
         }
 
-        return hasErrors ? -1 : 0;
+        return !hasErrors;
     }
 
     bool Compiler::verbose() const
@@ -221,14 +269,14 @@ namespace javac
                     {
                         if (verbose())
                         {
-                            jcutils::printlnDebugCustom("Adding file \"" + absolutePath.string() + "\"");
+                            jcutils::printDebugCustom("Adding file \"" + absolutePath.string() + "\"");
                         }
                     }
                 } else if (is_directory(absolutePath))
                 {
                     if (verbose())
                     {
-                        jcutils::printlnDebugCustom("Scanning directory \"" + absolutePath.string() + "\"");
+                        jcutils::printDebugCustom("Scanning directory \"" + absolutePath.string() + "\"");
                     }
                     for (const auto& entry : fs::recursive_directory_iterator(absolutePath))
                     {
@@ -240,7 +288,7 @@ namespace javac
                                 addParentPath(entryAbsolutePath, absolutePath);
                                 if (verbose())
                                 {
-                                    jcutils::printlnDebugCustom("Adding file \"" + entryAbsolutePath.string() + "\"");
+                                    jcutils::printDebugCustom("Adding file \"" + entryAbsolutePath.string() + "\"");
                                 }
                             }
                         }
@@ -254,7 +302,7 @@ namespace javac
         }
         if (verbose())
         {
-            jcutils::printlnInfoCustom("Scanned and found " + std::to_string(compileRtData->filesToCompile.size()) + " file(s) to compile");
+            jcutils::printInfoCustom("Scanned and found " + std::to_string(compileRtData->filesToCompile.size()) + " file(s) to compile", VERBOSE);
         }
         return true;
     }
@@ -278,7 +326,7 @@ namespace javac
                 case 0:
                     if (verbose())
                     {
-                        jcutils::printlnDebugCustom("Successfully saved file \"" + path2Bytes.first.string() + "\"");
+                        jcutils::printDebugCustom("Successfully saved file \"" + path2Bytes.first.string() + "\"");
                     }
                     break;
                 default:
@@ -293,45 +341,45 @@ namespace javac
         }
         if (verbose())
         {
-            jcutils::printlnInfoCustom("Saved " + std::to_string(compileRtData->filesToWrite.size()) + " file(s)");
+            jcutils::printInfoCustom("Saved " + std::to_string(compileRtData->filesToWrite.size()) + " file(s)", VERBOSE);
         }
         return true;
     }
 
-    int Compiler::run()
+    bool Compiler::run()
     {
         startTime = jcutils::getMSTime();
 
-        int exitCode = 0;
+        bool hasError = false;
 
         bool pre = preProcess();
         if (!pre)
         {
             printTerminate();
-            return -1;
+            return false;
         }
 
         switch (compilerConfig.action)
         {
             case JavacAction::Compile:
             {
-                exitCode = compile();
+                hasError = !compile();
                 break;
             }
             case JavacAction::Inspect:
             {
-                exitCode = inspect();
+                hasError = !inspect();
                 break;
             }
             case JavacAction::Lexer:
             {
-                exitCode = lex();
+                hasError = !lexExperimental();
                 break;
             }
             default:
             {
-                jcutils::printlnErrorCustom("Unknown compiler starting action, this should not happen");
-                return -1;
+                jcutils::printErrorCustom("Unknown compiler starting action, this should not happen");
+                return false;
             }
         }
 
@@ -344,8 +392,8 @@ namespace javac
 
         endTime = jcutils::getMSTime();
 
-        jcutils::printlnInfoCustom("Finished compiling, time took: " + std::to_string((endTime - startTime)) + "ms");
+        jcutils::printInfoBy("Finished compiling, time took: " + std::to_string((endTime - startTime)) + "ms");
 
-        return exitCode;
+        return !hasError;
     }
 } // javac

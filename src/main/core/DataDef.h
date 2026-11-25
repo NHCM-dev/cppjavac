@@ -20,6 +20,9 @@ namespace fs = std::filesystem;
 
 using ByteArray = std::vector<std::byte>;
 
+/**
+ * A class that inherit std::filesystem::path, will convert value constructed into UTF8 string
+ */
 class Path : public fs::path
 {
 public:
@@ -64,5 +67,10 @@ struct SourceRange
     SourceLocation begin;
     SourceLocation end; // Exclusive
 };
+
+inline std::string sourceLocationToString(const SourceLocation& sourceLocation)
+{
+    return std::string(std::to_string(sourceLocation.line) + ":" + std::to_string(sourceLocation.column));
+}
 
 #endif //JAVACOMPILER_DATADEF_H

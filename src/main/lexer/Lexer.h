@@ -23,6 +23,7 @@ namespace javac
         std::u16string sourceCode;
         std::set<JavacExtension> extensions;
         std::vector<Token> tokens;
+        std::vector<std::unique_ptr<Token>> invalidTokens;
         std::u16string tokenBuffer;
 
         std::size_t offset = 0;
@@ -53,13 +54,13 @@ namespace javac
             LangLevel sourceLangLevel = LangLevel::Eight);
 
         /**
-         * Tokenize java source code and generate a vector of tokens
+         * Tokenize java source code and generate a struct contains vector of tokens and references of invalid tokens
          * @throws std::invalid_argument for malformed Unicode escapes before tokenization
          * @param spaceAndLine Process and produce space and new line tokens
          * @param comment Process and produce comment tokens
          * @return return a vector of tokens
          */
-        std::vector<Token> lex(bool spaceAndLine = false, bool comment = false);
+        TokenStream lex(bool spaceAndLine = false, bool comment = false);
     };
 } // javac
 

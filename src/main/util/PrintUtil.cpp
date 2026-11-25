@@ -35,23 +35,26 @@ namespace jcutils
     static void writeColored(std::ostream& output, std::string_view str, PrintColor color)
     {
         #ifdef _WIN32
-        HANDLE console = GetStdHandle(&output == &std::cerr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
-        DWORD mode;
-        if (!str.empty() && GetConsoleMode(console, &mode))
+        if (&output == &std::cout || &output == &std::cerr)
         {
-            try
+            HANDLE console = GetStdHandle(&output == &std::cerr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+            DWORD mode;
+            if (!str.empty() && GetConsoleMode(console, &mode))
             {
-                const auto wideText = EncodingTool::utf8ToUtf16(formatColor(str, color));
-                output.flush();
-                DWORD written;
-                if (WriteConsoleW(console, wideText.data(), wideText.size(), &written, nullptr))
+                try
                 {
-                    return;
+                    const auto wideText = EncodingTool::utf8ToUtf16(formatColor(str, color));
+                    output.flush();
+                    DWORD written;
+                    if (WriteConsoleW(console, wideText.data(), wideText.size(), &written, nullptr))
+                    {
+                        return;
+                    }
                 }
-            }
-            catch (const std::invalid_argument&)
-            {
-                // Preserve raw bytes if a system diagnostic is not UTF-8.
+                catch (const std::invalid_argument&)
+                {
+                    // Preserve raw bytes if a system diagnostic is not UTF-8.
+                }
             }
         }
         #endif
@@ -66,11 +69,22 @@ namespace jcutils
     }
 
     static void writeMessage(std::ostream& output, std::string_view str,
-        std::string_view owner, std::string_view prefix, Color prefixColor)
+        std::string_view owner, std::string_view prefix, Color prefixColor,
+        std::string_view path = {}, std::string_view location = {})
     {
         if (!owner.empty())
         {
             writeColored(output, owner, OWNER_COLOR);
+            output << ": ";
+        }
+        if (!path.empty())
+        {
+            writeColored(output, path, DIAGNOSTIC_PATH_COLOR);
+            output << (location.empty() ? ": " : ":");
+        }
+        if (!location.empty())
+        {
+            writeColored(output, location, DIAGNOSTIC_SITE_COLOR);
             output << ": ";
         }
         if (!prefix.empty())
@@ -79,6 +93,13 @@ namespace jcutils
             output << ": ";
         }
         writeColored(output, str, MESSAGE_COLOR);
+        output.put('\n');
+    }
+
+    void printDiagnosticHeader(std::string_view message, std::string_view owner,
+        std::string_view path, std::string_view location, std::string_view severity, Color severityColor)
+    {
+        writeMessage(std::cerr, message, owner, severity, severityColor, path, location);
     }
 
     std::string colorString(std::string_view str)
@@ -88,7 +109,13 @@ namespace jcutils
 
     void print(std::string_view str)
     {
-        writeColored(std::cout, str, DEFAULT_COLOR);
+        print(std::cout, str);
+    }
+
+    void print(std::ostream& output, std::string_view str)
+    {
+        writeColored(output, str, DEFAULT_COLOR);
+        output.put('\n');
     }
 
     void printBy(std::string_view str)
@@ -166,90 +193,33 @@ namespace jcutils
         writeMessage(std::cerr, str, owner, "error", ERROR_COLOR);
     }
 
-    void println(std::string_view str)
+    void printNoteBy(std::string_view str)
     {
-        writeColored(std::cout, str, DEFAULT_COLOR);
-        std::cout.put('\n');
+        printNoteCustom(str, javac::program);
     }
 
-    void printlnBy(std::string_view str)
+    void printNoteCustom(std::string_view str, std::string_view owner)
     {
-        printlnCustom(str, javac::program);
+        writeMessage(std::cerr, str, owner, "note", NOTE_COLOR);
     }
 
-    void printlnCustom(std::string_view str, std::string_view owner)
+    void printRemarkBy(std::string_view str)
     {
-        printlnPrefixCustom({}, str, owner);
+        printRemarkCustom(str, javac::program);
     }
 
-    void printlnPrefixBy(std::string_view str)
+    void printRemarkCustom(std::string_view str, std::string_view owner)
     {
-        printlnBy(str);
+        writeMessage(std::cerr, str, owner, "remark", REMARK_COLOR);
     }
 
-    void printlnPrefixBy(std::string_view prefix, std::string_view str)
+    void printFatalErrorBy(std::string_view str)
     {
-        printlnPrefixCustom(prefix, str, javac::program);
+        printFatalErrorCustom(str, javac::program);
     }
 
-    void printlnPrefixCustom(std::string_view prefix, std::string_view str, std::string_view owner)
+    void printFatalErrorCustom(std::string_view str, std::string_view owner)
     {
-        writeMessage(std::cout, str, owner, prefix, PREFIX_COLOR);
-        std::cout.put('\n');
-    }
-
-    void printlnInfoBy(std::string_view str)
-    {
-        printlnInfoCustom(str, javac::program);
-    }
-
-    void printlnInfoCustom(std::string_view str, std::string_view owner)
-    {
-        writeMessage(std::cout, str, owner, "info", INFO_COLOR);
-        std::cout.put('\n');
-    }
-
-    void printlnDebugBy(std::string_view str)
-    {
-        printlnDebugCustom(str, javac::program);
-    }
-
-    void printlnDebugCustom(std::string_view str, std::string_view owner)
-    {
-        writeMessage(std::cout, str, owner, "debug", DEBUG_COLOR);
-        std::cout.put('\n');
-    }
-
-    void printlnSuccessBy(std::string_view str)
-    {
-        printlnSuccessCustom(str, javac::program);
-    }
-
-    void printlnSuccessCustom(std::string_view str, std::string_view owner)
-    {
-        writeMessage(std::cout, str, owner, "success", SUCCESS_COLOR);
-        std::cout.put('\n');
-    }
-
-    void printlnWarningBy(std::string_view str)
-    {
-        printlnWarningCustom(str, javac::program);
-    }
-
-    void printlnWarningCustom(std::string_view str, std::string_view owner)
-    {
-        writeMessage(std::cerr, str, owner, "warning", WARNING_COLOR);
-        std::cerr.put('\n');
-    }
-
-    void printlnErrorBy(std::string_view str)
-    {
-        printlnErrorCustom(str, javac::program);
-    }
-
-    void printlnErrorCustom(std::string_view str, std::string_view owner)
-    {
-        writeMessage(std::cerr, str, owner, "error", ERROR_COLOR);
-        std::cerr.put('\n');
+        writeMessage(std::cerr, str, owner, "fatal error", FATAL_ERROR_COLOR);
     }
 }

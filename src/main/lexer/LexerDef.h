@@ -128,7 +128,7 @@ namespace javac
     [[nodiscard]] bool isStandaloneSymbol(std::string_view spelling);
     [[nodiscard]] bool isStandaloneSymbol(std::u16string_view spelling);
 
-    enum class InvalidTokenType
+    enum class InvalidTokenType : uint8_t
     {
         SwitchLineInStringLiteral,
         SwitchLineInCharacterLiteral,
@@ -148,6 +148,13 @@ namespace javac
         InvalidNumericLiteral
     };
 
+    /**
+     * Get the diagnostic message for an invalid token.
+     * @param type reason the token is invalid
+     * @return diagnostic message without a severity prefix
+     */
+    [[nodiscard]] std::string_view invalidTokenStr(InvalidTokenType type);
+
     struct Token
     {
         TokenType tokenType;
@@ -158,6 +165,12 @@ namespace javac
         std::optional<JavaKeyword> keyword;
         std::optional<InvalidTokenType> invalidReason;
         bool canBeIdentifier = false; // The parser may consume this token in a name position.
+    };
+
+    struct TokenStream
+    {
+        std::vector<Token> tokens;
+        std::vector<std::unique_ptr<Token>> invalidTokens;
     };
 
 } // javac

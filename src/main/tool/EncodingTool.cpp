@@ -137,6 +137,52 @@ std::u16string EncodingTool::utf8ToUtf16(const std::string& string)
     return result;
 }
 
+std::string EncodingTool::utf16ToUtf8(std::u16string_view text)
+{
+    std::string result;
+    result.reserve(text.size());
+    const auto appendContinuation = [&](char32_t value) {
+        result.push_back(static_cast<char>(0x80 | (value & 0x3F)));
+    };
+
+    for (std::size_t offset = 0; offset < text.size(); ++offset)
+    {
+        char32_t codePoint = text[offset];
+        if (codePoint >= 0xD800 && codePoint <= 0xDBFF && offset + 1 < text.size()
+            && text[offset + 1] >= 0xDC00 && text[offset + 1] <= 0xDFFF)
+        {
+            codePoint = 0x10000 + ((codePoint - 0xD800) << 10) + (text[++offset] - 0xDC00);
+        }
+        else if (codePoint >= 0xD800 && codePoint <= 0xDFFF)
+        {
+            codePoint = 0xFFFD;
+        }
+
+        if (codePoint < 0x80)
+        {
+            result.push_back(static_cast<char>(codePoint));
+            continue;
+        }
+        if (codePoint < 0x800)
+        {
+            result.push_back(static_cast<char>(0xC0 | (codePoint >> 6)));
+        }
+        else if (codePoint < 0x10000)
+        {
+            result.push_back(static_cast<char>(0xE0 | (codePoint >> 12)));
+            appendContinuation(codePoint >> 6);
+        }
+        else
+        {
+            result.push_back(static_cast<char>(0xF0 | (codePoint >> 18)));
+            appendContinuation(codePoint >> 12);
+            appendContinuation(codePoint >> 6);
+        }
+        appendContinuation(codePoint);
+    }
+    return result;
+}
+
 std::u16string EncodingTool::decodeToUtf16(const std::string& bytes, TextEncoding originalEncoding)
 {
     if (originalEncoding == TextEncoding::UTF8)

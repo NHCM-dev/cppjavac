@@ -11,6 +11,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace jcutils
 {
@@ -44,6 +45,25 @@ namespace jcutils
     {
         return set.insert(value).second;
     }
+
+    template<typename T, typename Predicate>
+    void removeIf(std::vector<T>& vec, Predicate pred)
+    {
+        std::vector<T> result;
+        result.reserve(vec.size());
+
+        for (auto& element : vec)
+        {
+            if (!pred(element))
+            {
+                result.emplace_back(std::move(element));
+            }
+        }
+
+        vec.swap(result);
+    }
+
+    std::vector<std::string_view> splitLines(std::string_view str);
 
     std::string toLower(std::string str);
 }

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
+file(GLOB_RECURSE cppjavac_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
@@ -17,15 +17,15 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.inc")
-add_executable(JavaCompiler ${JavaCompiler_SOURCES})
-target_include_directories(JavaCompiler PRIVATE src)
-set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
+add_executable(cppjavac ${cppjavac_SOURCES})
+target_include_directories(cppjavac PRIVATE src)
+set_target_properties(cppjavac PROPERTIES OUTPUT_NAME javac)
 
 if(NOT WIN32)
     find_package(Iconv REQUIRED)
-    target_link_libraries(JavaCompiler PRIVATE Iconv::Iconv)
+    target_link_libraries(cppjavac PRIVATE Iconv::Iconv)
 endif()
 
 if(MINGW)
-    target_link_options(JavaCompiler PRIVATE -static -municode)
+    target_link_options(cppjavac PRIVATE -static -municode)
 endif()

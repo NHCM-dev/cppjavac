@@ -14,6 +14,7 @@
 namespace javac
 {
     inline std::string_view LEXER = "lexer";
+    inline std::string_view VERBOSE = "verbose";
 
     struct CompileRtData
     {
@@ -22,12 +23,12 @@ namespace javac
 
         std::map<Path, Path> parentPathRecord = {};
 
-        std::map<Path, std::vector<Token>> tokenStreams = {};
+        std::map<Path, TokenStream> tokenStreams = {};
 
         std::set<Path> filesToCompile = {};
         std::map<Path, ByteArray> filesToWrite = {};
 
-        std::vector<Token>* getTokens(const Path& sourcePath)
+        TokenStream* getTokenStream(const Path& sourcePath)
         {
            return jcutils::getOrNull(tokenStreams, sourcePath);
         }
@@ -49,6 +50,9 @@ namespace javac
 
         void noticeError(const std::string& error, std::string_view owner = {});
         void noticeWarning(const std::string& warning);
+
+        
+
         bool addParentPath(const Path& sourcePath, const Path& parentPath);
         Path* getParentPath(const Path& sourceFilePath);
 
@@ -62,9 +66,13 @@ namespace javac
         CompileRtData* compileRtData = nullptr;
         JavacConfig& compilerConfig;
 
-        int compile();
-        int inspect();
-        int lex();
+        bool compile();
+        bool inspect();
+        bool lex();
+        bool reportInvalidTokens(const Path& file, std::u16string_view source, const TokenStream& tokens);
+
+        bool lexExperimental();
+
         bool preProcess();
         bool postProcess();
 
@@ -78,7 +86,7 @@ namespace javac
             delete compileRtData;
         }
 
-        int run();
+        bool run();
     };
 
 } // javac

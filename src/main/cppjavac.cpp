@@ -17,7 +17,7 @@ int main(int argc, char** argv)
 {
     if (argc <= 1)
     {
-        jcutils::printlnErrorBy("Missing options");
+        jcutils::printErrorBy("Missing options");
         return -1;
     }
 
@@ -45,10 +45,10 @@ int main(int argc, char** argv)
 
     if (jcutils::contains(javac::args, "--list-extensions"))
     {
-        jcutils::printlnInfoBy("List of currently supported compiler extensions");
+        jcutils::printInfoBy("List of currently supported compiler extensions");
         for (const auto& info : javac::listExtensions())
         {
-            jcutils::println(info.name);
+            jcutils::print(info.name);
         }
         return 0;
     }
@@ -60,12 +60,12 @@ int main(int argc, char** argv)
         javac::config = parsedConfig;
     } catch (const fs::filesystem_error& e)
     {
-        jcutils::printlnErrorBy(e.what());
+        jcutils::printErrorBy(e.what());
         return -1;
     } catch (std::invalid_argument& e)
     {
         delete parsedConfig;
-        jcutils::printlnErrorBy(e.what());
+        jcutils::printErrorBy(e.what());
         return -1;
     }
 

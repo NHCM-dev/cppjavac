@@ -6,6 +6,7 @@
 #define JAVACOMPILER_PRINTUTIL_H
 
 #include <cstdint>
+#include <iosfwd>
 #include <string>
 #include <string_view>
 
@@ -43,10 +44,20 @@ namespace jcutils
     inline Color DEBUG_COLOR = Color::BrightYellow;
     inline Color SUCCESS_COLOR = Color::BrightGreen;
     inline Color WARNING_COLOR = Color::Magenta;
-    inline Color ERROR_COLOR = Color::BrightRed;
+    inline Color ERROR_COLOR = Color::Red;
+    inline Color NOTE_COLOR = Color::BrightBlack;
+    inline Color REMARK_COLOR = Color::Blue;
+    inline Color FATAL_ERROR_COLOR = Color::Red;
+
+    inline Color DIAGNOSTIC_PATH_COLOR = Color::BrightGreen;
+    inline Color DIAGNOSTIC_SITE_COLOR = Color::BrightCyan;
+
+    void printDiagnosticHeader(std::string_view message, std::string_view owner,
+        std::string_view path, std::string_view location, std::string_view severity, Color severityColor);
 
     std::string colorString(std::string_view str);
     void print(std::string_view str = {});
+    void print(std::ostream& output, std::string_view str);
     void printBy(std::string_view str = {});
     void printCustom(std::string_view str = {}, std::string_view owner = {});
     void printPrefixBy(std::string_view str = {});
@@ -62,23 +73,12 @@ namespace jcutils
     void printWarningCustom(std::string_view str = {}, std::string_view owner = {});
     void printErrorBy(std::string_view str = {});
     void printErrorCustom(std::string_view str = {}, std::string_view owner = {});
-
-    void println(std::string_view str = {});
-    void printlnBy(std::string_view str = {});
-    void printlnCustom(std::string_view str = {}, std::string_view owner = {});
-    void printlnPrefixBy(std::string_view str = {});
-    void printlnPrefixBy(std::string_view prefix, std::string_view str);
-    void printlnPrefixCustom(std::string_view prefix, std::string_view str, std::string_view owner = {});
-    void printlnInfoBy(std::string_view str = {});
-    void printlnInfoCustom(std::string_view str = {}, std::string_view owner = {});
-    void printlnDebugBy(std::string_view str = {});
-    void printlnDebugCustom(std::string_view str = {}, std::string_view owner = {});
-    void printlnSuccessBy(std::string_view str = {});
-    void printlnSuccessCustom(std::string_view str = {}, std::string_view owner = {});
-    void printlnWarningBy(std::string_view str = {});
-    void printlnWarningCustom(std::string_view str = {}, std::string_view owner = {});
-    void printlnErrorBy(std::string_view str = {});
-    void printlnErrorCustom(std::string_view str = {}, std::string_view owner = {});
+    void printNoteBy(std::string_view str = {});
+    void printNoteCustom(std::string_view str = {}, std::string_view owner = {});
+    void printRemarkBy(std::string_view str = {});
+    void printRemarkCustom(std::string_view str = {}, std::string_view owner = {});
+    void printFatalErrorBy(std::string_view str = {});
+    void printFatalErrorCustom(std::string_view str = {}, std::string_view owner = {});
 
 }
 

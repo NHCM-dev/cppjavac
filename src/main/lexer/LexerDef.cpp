@@ -140,4 +140,36 @@ namespace javac
     {
         return isStandaloneSymbolSpelling(spelling);
     }
+
+    std::string_view invalidTokenStr(InvalidTokenType type)
+    {
+        switch (type)
+        {
+            case InvalidTokenType::SwitchLineInStringLiteral:
+                return "line break in string literal";
+            case InvalidTokenType::SwitchLineInCharacterLiteral:
+                return "line break in character literal";
+            case InvalidTokenType::NoneFinishEscapeInStringLiteral:
+                return "incomplete escape sequence in string literal";
+            case InvalidTokenType::NoneFinishEscapeInCharacterLiteral:
+                return "incomplete escape sequence in character literal";
+            case InvalidTokenType::NoneFinishStringLiteral:
+                return "unterminated string literal";
+            case InvalidTokenType::NoneFinishCharacterLiteral:
+                return "unterminated character literal";
+            case InvalidTokenType::NoneFinishMultiLineComment:
+                return "unterminated block comment";
+            case InvalidTokenType::TooLargeCharacterLiteral:
+                return "too many characters in character literal";
+            case InvalidTokenType::UnknownTokenType:
+                return "unrecognized token";
+            case InvalidTokenType::EmptyCharacterLiteral:
+                return "empty character literal";
+            case InvalidTokenType::InvalidEscapeSequence:
+                return "invalid escape sequence";
+            case InvalidTokenType::InvalidNumericLiteral:
+                return "invalid numeric literal";
+        }
+        return "invalid token";
+    }
 } // javac

@@ -69,9 +69,10 @@ namespace javac
         tokenBuffer.clear();
     }
 
-    std::vector<Token> Lexer::lex(bool spaceAndLine, bool comment)
+    TokenStream Lexer::lex(bool spaceAndLine, bool comment)
     {
         tokens.clear();
+        invalidTokens.clear();
         tokenBuffer.clear();
         offset = 0;
         line = 1;
@@ -105,6 +106,7 @@ namespace javac
         const auto isWhitespace = [](char16_t ch) { return ch == u' ' || ch == u'\t' || ch == u'\f'; };
         const auto pushInvalid = [&](InvalidTokenType reason) {
             pushToken(TokenType::Invalid, std::nullopt, std::nullopt, reason);
+            invalidTokens.push_back(std::make_unique<Token>(tokens.back()));
         };
         const auto finishComment = [&] {
             if (comment)
@@ -437,6 +439,6 @@ namespace javac
         tokenStart = {sourceCode.size(), line, column + 1};
         pushToken(TokenType::EndOfFile);
 
-        return std::move(tokens);
+        return {std::move(tokens), std::move(invalidTokens)};
     }
 } // javac
