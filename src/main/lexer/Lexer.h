@@ -60,7 +60,7 @@ namespace javac
          * @param comment Process and produce comment tokens
          * @return return a vector of tokens
          */
-        TokenStream lex(bool spaceAndLine = true, bool comment = false);
+        TokenStream lex(bool spaceAndLine = false, bool comment = false);
     };
 } // javac
 

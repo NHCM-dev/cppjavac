@@ -21,134 +21,88 @@ namespace javac
         return CompilationUnitType::Ordinary;
     }
 
-
-
-
-    bool Parser::isOp(ParserOp operation)
+    const std::vector<Token>& Parser::tokens() const
     {
-        return this->op ==  operation;
+        return this->inputStream.tokens;
     }
 
-    void Parser::setOp(ParserOp operation)
+    const Token& Parser::peek(std::size_t offset) const
     {
-        this->op = operation;
-    }
-
-    void Parser::clearOp()
-    {
-        this->op = ParserOp::None;
-    }
-
-    bool Parser::opUnfinished()
-    {
-        return this->op == ParserOp::PendingAnnotation
-        || this->op == ParserOp::PendingPackage;
-    }
-
-
-
-
-    void Parser::appendBuffer(uint8_t slot, std::u16string_view string)
-    {
-        this->stringBufferSlots[slot] += string;
-    }
-
-    void Parser::appendBuffer(uint8_t slot, char16_t character)
-    {
-        this->stringBufferSlots[slot] += character;
-    }
-
-    const std::u16string& Parser::readBuffer(uint8_t slot)
-    {
-        return this->stringBufferSlots.at(slot);
-    }
-
-    std::u16string Parser::flushBuffer(uint8_t slot)
-    {
-        return std::exchange(this->stringBufferSlots.at(slot), {});
-    }
-
-    // bool Parser::bufferHasSpace(uint8_t slot)
-    // {
-    //     return jcutils::hasSpace(this->stringBufferSlots.at(slot));
-    // }
-
-
-    void Parser::pushAnnotation(Annotation annotation)
-    {
-        this->annotationBuffer.push_back(std::move(annotation));
-    }
-
-    std::optional<Annotation> Parser::popAnnotation()
-    {
-        if (this->annotationBuffer.empty())
+        if (tokenPointer + offset >= tokens().size())
         {
-            return std::nullopt;
+            offset = 0;
         }
-
-        Annotation ret = std::move(this->annotationBuffer.back());
-        this->annotationBuffer.pop_back();
-
-        return ret;
+        return tokens().at(tokenPointer + offset);
     }
-
-    std::queue<Annotation> Parser::flushAnnotation()
+    const Token& Parser::advance()
     {
-        return std::queue<Annotation>(
-            std::exchange(this->annotationBuffer, {})
-        );
-    }
-
-    std::size_t Parser::delimiterCount(SymbolType type)
-    {
-        return delimiterCounter(type);
-    }
-
-    std::size_t& Parser::delimiterCounter(SymbolType opening)
-    {
-        switch (opening)
+        if (tokenPointer + 1 >= tokens().size())
         {
-            case SymbolType::LParen: return unusedParen;
-            case SymbolType::LBracket: return unusedBracket;
-            case SymbolType::LBrace: return unusedBrace;
-            default: throw std::invalid_argument("Expected an opening delimiter");
+            return tokens().back();
         }
+        return tokens().at(tokenPointer++);
     }
-
-    void Parser::pushDelimiter(SymbolType opening)
+    bool Parser::isAtEnd() const
     {
-        ++delimiterCounter(opening);
-        delimiterOrder.push(opening);
-    }
-
-    void Parser::popDelimiter(SymbolType opening)
-    {
-        if (delimiterOrder.empty() || delimiterOrder.top() != opening)
+        if (tokenPointer >= tokens().size())
         {
-            errorProcessPlaceholder();
-            return;
+            return true;
         }
-
-        --delimiterCounter(opening);
-        delimiterOrder.pop();
+        return peek().tokenType == TokenType::EndOfFile;
     }
 
-    void Parser::clearDelimiters()
+    bool Parser::checkSymbol(SymbolType type) const
     {
-        unusedParen = 0;
-        unusedBracket = 0;
-        unusedBrace = 0;
-        delimiterOrder = {};
+        return peek().symbol.has_value() && peek().symbol.value() == type;
     }
-
-    PackageDecl& Parser::getOrCreatePackage()
+    bool Parser::matchSymbol(SymbolType type)
     {
-        if (!compilationUnit.packageDecl)
+        if (checkSymbol(type))
         {
-            compilationUnit.packageDecl = {};
-            return compilationUnit.packageDecl.value();
+            advance();
+            return true;
         }
-        return compilationUnit.packageDecl.value();
+        return false;
+    }
+
+    const Token& Parser::expectSymbol(SymbolType type)
+    {
+        if (checkSymbol(type))
+        {
+            return advance();
+        }
+        throw parser_exception(ParserExceptionType::ExpectSymbol, peek());
+    }
+
+    bool Parser::checkKeyword(const JavaKeyword& keyword) const
+    {
+        return peek().keyword.has_value() && peek().keyword.value() == keyword;
+    }
+    bool Parser::matchKeyword(const JavaKeyword& keyword)
+    {
+        if (checkKeyword(keyword))
+        {
+            advance();
+            return true;
+        }
+        return false;
+    }
+    const Token& Parser::expectKeyword(const JavaKeyword& keyword)
+    {
+        if (checkKeyword(keyword))
+        {
+            return advance();
+        }
+        throw parser_exception(ParserExceptionType::ExpectKeyword, peek());
+    }
+
+    const Token& Parser::expectIdentifier()
+    {
+        if (peek().canBeIdentifier)
+        {
+            return advance();
+        }
+        throw parser_exception(ParserExceptionType::ExpectIdentifier, peek());
     }
 
 }

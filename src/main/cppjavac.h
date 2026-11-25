@@ -14,11 +14,11 @@ namespace javac
 {
     class Compiler;
 
-    inline std::string program = "javac";
+    inline constexpr std::string program = "javac";
 
     inline Compiler* compiler = nullptr;
 
-    inline std::vector<std::string> args;
+    inline constexpr std::vector<std::string> args;
     inline JavacConfig* config = nullptr;
 
     inline uint64_t startTime = 0;
