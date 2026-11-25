@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <stdexcept>
 
-#include "JavaCompiler.h"
+#include "cppjavac.h"
 #include "core/JavacConfig.h"
 #include "lexer/Lexer.h"
 #include "tool/EncodingTool.h"

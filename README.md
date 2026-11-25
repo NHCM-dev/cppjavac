@@ -28,4 +28,6 @@ cmake --preset release
 cmake --build --preset release
 ```
 
-The output will be at `./cmake-build-release/javac.exe`.
+The Windows executable will be at `./cmake-build-release/javac.exe`.
+
+For a static Windows build with MinGW, use a WinLibs UCRT toolchain. In CLion, select that toolchain for the release profile. If the build directory was configured with another compiler, reset its CMake cache before reconfiguring.

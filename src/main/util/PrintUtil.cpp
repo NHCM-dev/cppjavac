@@ -4,7 +4,7 @@
 
 #include "PrintUtil.h"
 
-#include "main/JavaCompiler.h"
+#include "main/cppjavac.h"
 #include "main/tool/EncodingTool.h"
 
 #include <iostream>

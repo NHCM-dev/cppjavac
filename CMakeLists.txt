@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(JavaCompiler)
+project(cppjavac)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,13 +17,7 @@ file(GLOB_RECURSE JavaCompiler_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.inc")
-add_executable(JavaCompiler ${JavaCompiler_SOURCES}
-        src/main/ast/astdefs/Expressions.cpp
-        src/main/ast/astdefs/Expressions.h
-        src/main/ast/astdefs/Statements.cpp
-        src/main/ast/astdefs/Statements.h
-        src/main/ast/astdefs/Declarations.cpp
-        src/main/ast/astdefs/Declarations.h)
+add_executable(JavaCompiler ${JavaCompiler_SOURCES})
 target_include_directories(JavaCompiler PRIVATE src)
 set_target_properties(JavaCompiler PROPERTIES OUTPUT_NAME javac)
 

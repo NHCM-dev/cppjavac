@@ -2,7 +2,7 @@
 // Created by NHCM on 2026/11/22.
 //
 
-#include "JavaCompiler.h"
+#include "cppjavac.h"
 
 #include "Compiler.h"
 #include "cli/ConfigParser.h"
