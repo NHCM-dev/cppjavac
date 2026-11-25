@@ -4,11 +4,8 @@
 
 #ifndef JAVACOMPILER_PARSER_H
 #define JAVACOMPILER_PARSER_H
-#include <cstddef>
-#include <deque>
-#include <queue>
-#include <stack>
-#include <utility>
+
+#include "ParserUtil.h"
 #include <vector>
 
 #include "main/ast/astdefs/Declarations.h"
@@ -22,6 +19,18 @@ namespace javac
         ExpectSymbol,
         ExpectKeyword,
         ExpectIdentifier,
+        ExpectClassLiteral,
+
+        MultipleExtends,
+        MultipleImplements,
+        MultiplePermits,
+
+        NeedBraceForClassDeclaration,
+
+        NotLiteral,
+
+        InvalidNumberLiteral,
+        OutOfRangeNumberLiteral,
     };
 
     class parser_exception : public std::logic_error
@@ -38,6 +47,12 @@ namespace javac
 
         parser_exception(ParserExceptionType exception, Token actualToken)
             : logic_error({}), exception(exception), actualToken(actualToken)
+        {
+
+        }
+
+        parser_exception(ParserExceptionType exception, Token actualToken, const std::string& cause)
+            : logic_error(cause), exception(exception), actualToken(actualToken)
         {
 
         }
@@ -62,6 +77,7 @@ namespace javac
 
         // === basic tools ===
 
+        // Returns the reference of token stream
         [[nodiscard]]
         const std::vector<Token>& tokens() const;
 
@@ -106,6 +122,9 @@ namespace javac
          */
         const Token& expectKeyword(const JavaKeyword& keyword);
 
+        // Return true if current token is an identifier
+        [[nodiscard]]
+        bool checkIdentifier() const;
         /**
           * If current token is an identifier, return the current token and advance, otherwise throw exception
           * @throw parser_exception if the current token is not an identifier
@@ -114,6 +133,8 @@ namespace javac
         const Token& expectIdentifier();
 
         // ======
+
+        TypeNode parseTypeNode();
 
         /**
          * Try parse a package declaration start from keyword "package"
@@ -124,12 +145,28 @@ namespace javac
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
         ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {});
         MethodDecl parseMethodDecl();
-        Annotation parseAnnotation();
 
+        std::vector<Annotation> parseAnnotations();
+        Annotation parseAnnotation();
         AnnotationArg parseAnnotationArg();
+        std::unique_ptr<Expr> parseAnnotationValue();
+        std::unique_ptr<Expr> parseAnnotationArray();
+        std::unique_ptr<Expr> parseAnnotationExpr();
+
         std::vector<GenericParameter> parseGenericParameters();
 
-        TypeNode parseTypeNode();
+        /**
+         * Treat next token as basic literal (string, int, etc) and try to parse it
+         * @throw parser_exception if next token is not a valid basic literal
+         * @return parsed basic literal
+         */
+        std::unique_ptr<Expr> parseBasicLiteral();
+         /**
+         * Try to parse until construct a valid class literal (XXX.class) and return it
+         * @throw parser_exception if there is no class literal to parse start from now
+         * @return parsed class literal
+         */
+        std::unique_ptr<ClassLiteralExpr> parseClassLiteral();
 
         void parseOrdinary();
         void parseModular();

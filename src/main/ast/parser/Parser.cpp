@@ -26,6 +26,7 @@ namespace javac
     CompilationUnit Parser::parse()
     {
         compilationUnit = {};
+        tokenPointer = 0;
         CompilationUnitType compilationUnitType = decideType(this->filePath);
 
 
@@ -47,14 +48,46 @@ namespace javac
 
     void Parser::parseOrdinary()
     {
-        try
+        auto annotations = parseAnnotations();
+        if (checkKeyword(PACKAGE))
         {
-
-        } catch (parser_exception)
-        {
-
+            compilationUnit.packageDecl = parsePackageDecl(std::move(annotations));
+            annotations = parseAnnotations();
         }
-        PackageDecl packageDecl = parsePackageDecl();
+
+        while (!isAtEnd() || !annotations.empty())
+        {
+            if (annotations.empty() && matchSymbol(SymbolType::Semicolon))
+            {
+                annotations = parseAnnotations();
+                continue;
+            }
+
+            std::vector<ModifierFlag> modifiers;
+            for (auto& annotation : annotations)
+            {
+                ModifierFlag modifier;
+                modifier.annotation = std::move(annotation);
+                modifiers.push_back(std::move(modifier));
+            }
+            compilationUnit.decls.push_back(std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers))));
+            annotations = parseAnnotations();
+        }
+    }
+
+    TypeNode Parser::parseTypeNode()
+    {
+        throw std::logic_error("Type parsing is not implemented");
+    }
+
+    std::vector<Annotation> Parser::parseAnnotations()
+    {
+        std::vector<Annotation> annotations;
+        while (checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE)
+        {
+            annotations.push_back(parseAnnotation());
+        }
+        return annotations;
     }
 
     void Parser::parseModular()
@@ -88,20 +121,79 @@ namespace javac
         decl.modifiers = std::move(modifiers);
         decl.name = expectIdentifier().content;
 
-        if (matchSymbol(SymbolType::LAngleBracket))
+        if (checkSymbol(SymbolType::LAngleBracket))
         {
             std::vector<GenericParameter> generics = parseGenericParameters();
             decl.typeParameters = std::move(generics);
         }
 
-        
+        bool extended = false;
+        bool interfaces = false;
+        bool permitted = false;
+        int tryTime = 0;
+
+        while (!checkSymbol(SymbolType::LBrace))
+        {
+            if (tryTime >= 3)
+            {
+                throw parser_exception(ParserExceptionType::NeedBraceForClassDeclaration, peek());
+            }
+            if (matchKeyword(EXTENDS))
+            {
+                if (extended)
+                {
+                    throw parser_exception(ParserExceptionType::MultipleExtends, peek());
+                }
+                extended = true;
+                decl.superClass = parseTypeNode();
+                tryTime++;
+            } else if (matchKeyword(IMPLEMENTS))
+            {
+                if (interfaces)
+                {
+                    throw parser_exception(ParserExceptionType::MultipleImplements, peek());
+                }
+                interfaces = true;
+                do
+                {
+                    decl.interfaces.push_back(parseTypeNode());
+                } while (matchSymbol(SymbolType::Comma));
+                tryTime++;
+            } else if (matchKeyword(PERMITS))
+            {
+                if (permitted)
+                {
+                    throw parser_exception(ParserExceptionType::MultiplePermits, peek());
+                }
+                permitted = true;
+                do
+                {
+                    decl.permittedTypes.push_back(parseTypeNode());
+                } while (matchSymbol(SymbolType::Comma));
+                tryTime++;
+            }
+            else
+            {
+                throw parser_exception(ParserExceptionType::NeedBraceForClassDeclaration, peek());
+            }
+        }
+
+        expectSymbol(SymbolType::LBrace);
+
+        //TODO: parse methods and fields
+
+        expectSymbol(SymbolType::RBrace);
 
         return decl;
     }
+
+
     MethodDecl Parser::parseMethodDecl()
     {
 
     }
+
+
     Annotation Parser::parseAnnotation()
     {
         expectSymbol(SymbolType::AtSign);
@@ -115,10 +207,61 @@ namespace javac
             annotation.name += expectIdentifier().content;
         }
 
-        //TODO: parse annotation arg
+        if (matchSymbol(SymbolType::LParen))
+        {
+            if (matchSymbol(SymbolType::RParen))
+            {
+                return annotation;
+            }
+            do
+            {
+                AnnotationArg arg = parseAnnotationArg();
+                annotation.arguments.push_back(std::move(arg));
+            } while (matchSymbol(SymbolType::LBrace));
+
+            expectSymbol(SymbolType::RParen);
+        }
+        return annotation;
     }
 
     AnnotationArg Parser::parseAnnotationArg()
+    {
+        // TODO: Parse annotation arguments.
+
+        AnnotationArg arg = {};
+        if (checkIdentifier())
+        {
+            arg.name = expectIdentifier().content;
+            expectSymbol(SymbolType::Assign);
+        }
+
+        arg.value = parseAnnotationValue();
+
+        return arg;
+    }
+
+    std::unique_ptr<Expr> Parser::parseAnnotationValue()
+    {
+        if (matchSymbol(SymbolType::AtSign))
+        {
+            return std::make_unique<Annotation>(parseAnnotation());
+        }
+
+        if (matchSymbol(SymbolType::LBrace))
+        {
+            return parseAnnotationArray();
+        }
+
+        return parseAnnotationExpr();
+    }
+
+    std::unique_ptr<Expr> Parser::parseAnnotationArray()
+    {
+        //TODO: implement array value
+        expectSymbol(SymbolType::RBrace);
+    }
+
+    std::unique_ptr<Expr> Parser::parseAnnotationExpr()
     {
 
     }
@@ -151,8 +294,93 @@ namespace javac
         return parameters;
     }
 
-    TypeNode Parser::parseTypeNode()
+    std::unique_ptr<Expr> Parser::parseBasicLiteral()
     {
+        const Token& token = peek();
+        switch (token.tokenType)
+        {
+            case TokenType::IntegerLiteral:
+            {
+                jlong number;
+                try
+                {
+                    number = jcutils::int64FromString(token.content);
+                } catch (const std::invalid_argument& e)
+                {
+                    throw parser_exception(ParserExceptionType::InvalidNumberLiteral, token, e.what());
+                }
+                catch (const std::out_of_range& e)
+                {
+                    throw parser_exception(ParserExceptionType::OutOfRangeNumberLiteral, token, e.what());
+                }
 
+                if (jcutils::int64IsLong(number, token.content))
+                {
+                    LongExpr longExpr;
+                    longExpr.value = number;
+                    return  std::make_unique<LongExpr>(longExpr);
+                }
+                IntExpr intExpr;
+                intExpr.value = static_cast<int32_t>(number);
+                return  std::make_unique<IntExpr>(intExpr);
+            }
+            case TokenType::FloatLiteral:
+            {
+                jdouble number;
+                try
+                {
+                    number = jcutils::doubleFromString(token.content);
+                } catch (const std::invalid_argument& e)
+                {
+                    throw parser_exception(ParserExceptionType::InvalidNumberLiteral, token, e.what());
+                }
+                catch (const std::out_of_range& e)
+                {
+                    throw parser_exception(ParserExceptionType::OutOfRangeNumberLiteral, token, e.what());
+                }
+
+                if (jcutils::is32Float(token.content))
+                {
+                    FloatExpr floatExpr;
+                    floatExpr.value = static_cast<jfloat>(number);
+                    return  std::make_unique<FloatExpr>(floatExpr);
+                }
+                DoubleExpr doubleExpr;
+                doubleExpr.value = number;
+                return  std::make_unique<DoubleExpr>(doubleExpr);
+            }
+            case TokenType::StringLiteral:
+            {
+                StringExpr stringExpr;
+                stringExpr.value = expectIdentifier().content;
+                return  std::make_unique<StringExpr>(stringExpr);
+            }
+            case TokenType::CharacterLiteral:
+            {
+                CharExpr charExpr;
+                charExpr.value = expectIdentifier().content.at(0);
+                return  std::make_unique<CharExpr>(charExpr);
+            }
+            case TokenType::BooleanLiteral:
+            {
+                BooleanExpr boolExpr;
+                boolExpr.value = jcutils::boolFromString(token.content);
+                return std::make_unique<BooleanExpr>(boolExpr);
+            }
+            case TokenType::NullLiteral:
+            {
+                NullExpr nullExpr;
+                return std::make_unique<NullExpr>(nullExpr);
+            }
+            default:
+            {
+                throw parser_exception(ParserExceptionType::NotLiteral, token);
+            }
+        }
+    }
+
+    std::unique_ptr<ClassLiteralExpr> Parser::parseClassLiteral()
+    {
+        //TODO: implementation required
     }
 } // javac

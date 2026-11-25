@@ -96,9 +96,14 @@ namespace javac
         throw parser_exception(ParserExceptionType::ExpectKeyword, peek());
     }
 
+    bool Parser::checkIdentifier() const
+    {
+        return peek().canBeIdentifier;
+    }
+
     const Token& Parser::expectIdentifier()
     {
-        if (peek().canBeIdentifier)
+        if (checkIdentifier())
         {
             return advance();
         }

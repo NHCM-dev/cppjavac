@@ -29,6 +29,8 @@ namespace javac
         FloatLiteral,          // 3.14, 1.0f, 1e10, 1.0d, 1e10d
         CharacterLiteral,      // 'a', '\n'
         StringLiteral,         // "Hello"
+        BooleanLiteral,        // true, false
+        NullLiteral,           // null
 
         // Symbols
         Symbol,                // Operators and separators
@@ -41,9 +43,6 @@ namespace javac
         // Format
         NewLine,               // \n
         Whitespace,            // ' '
-
-        BooleanLiteral,        // true, false
-        NullLiteral,           // null
     };
 
 

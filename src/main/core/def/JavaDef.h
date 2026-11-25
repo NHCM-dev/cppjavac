@@ -26,6 +26,12 @@ namespace javac
     static_assert(sizeof(jfloat) == 4);
     static_assert(sizeof(jdouble) == 8);
 
+    inline constexpr int32_t JINT_MIN = std::numeric_limits<int32_t>::min();
+    inline constexpr int32_t JINT_MAX = std::numeric_limits<int32_t>::max();
+
+    inline constexpr int64_t JLONG_MIN = std::numeric_limits<int64_t>::min();
+    inline constexpr int64_t JLONG_MAX = std::numeric_limits<int64_t>::max();
+
     enum class DebugInfo
     {
         Lines, // Line number
