@@ -49,6 +49,8 @@ namespace javac
         KeywordInClassLiteral,
         InvalidThrowsType,
         UnsupportedParameterDefault,
+
+        VoidAsFieldType,
     };
 
     class parser_exception : public std::logic_error

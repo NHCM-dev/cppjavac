@@ -82,7 +82,7 @@ namespace javac
 
     void Parser::parseModular()
     {
-
+        //TODO: implement
     }
 
     TypeNode Parser::parseTypeNode(std::vector<Annotation> leadingAnnotations,
@@ -340,7 +340,39 @@ namespace javac
 
     FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers)
     {
+        FieldDecl fieldDecl;
 
+        fieldDecl.modifiers = std::move(modifiers);
+
+        const Token& token = peek();
+        fieldDecl.type = parseTypeNode();
+
+        if (fieldDecl.type.objectType == ObjectType::Void)
+        {
+            throw parser_exception(ParserExceptionType::VoidAsFieldType, token);
+        }
+
+        do
+        {
+            VariableDeclarator variableDeclarator;
+
+            variableDeclarator.name = expectIdentifier().content;
+            std::vector<ArrayDimension> arrayDimensions = parseArrayDimension();
+            if (!arrayDimensions.empty())
+            {
+                variableDeclarator.dimensions = std::move(arrayDimensions);
+            }
+            if (matchSymbol(SymbolType::Assign))
+            {
+                //TODO: implement parse initializer
+                variableDeclarator.initializer = nullptr;
+            }
+            fieldDecl.declarators.push_back(std::move(variableDeclarator));
+        } while (matchSymbol(SymbolType::Comma));
+
+        expectSymbol(SymbolType::Semicolon);
+
+        return fieldDecl;
     }
 
     MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
@@ -525,13 +557,10 @@ namespace javac
 
     AnnotationArg Parser::parseAnnotationArg()
     {
-        // TODO: Parse annotation arguments.
-
         AnnotationArg arg = {};
         arg.name = expectIdentifier().content;
         expectSymbol(SymbolType::Assign);
         arg.value = parseElementValue();
-
         return arg;
     }
 
@@ -544,13 +573,13 @@ namespace javac
 
         if (matchSymbol(SymbolType::LBrace))
         {
-            return parseAnnotationArray();
+            return parseElementArray();
         }
 
-        return parseAnnotationExpr();
+        return parseElementExpr();
     }
 
-    std::unique_ptr<Expr> Parser::parseAnnotationArray()
+    std::unique_ptr<Expr> Parser::parseElementArray()
     {
         ArrayInitializerExpr arrayInitializer = {};
         if (!checkSymbol(SymbolType::RBrace) && !matchSymbol(SymbolType::Comma))
@@ -564,9 +593,9 @@ namespace javac
         return std::make_unique<ArrayInitializerExpr>(std::move(arrayInitializer));
     }
 
-    std::unique_ptr<Expr> Parser::parseAnnotationExpr()
+    std::unique_ptr<Expr> Parser::parseElementExpr()
     {
-
+        //TODO: implement
     }
 
     std::vector<GenericParameter> Parser::parseGenericParameters()

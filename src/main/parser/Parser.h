@@ -164,18 +164,19 @@ namespace javac
         std::vector<Annotation> parseAnnotations();
         Annotation parseAnnotation();
         AnnotationArg parseAnnotationArg();
+
+        // Element value (value in annotation value or method default value)
         /**
          * Parse value for both the value fit in annotation declaration and method default value declaration
          * @return parsed expression for the value
          */
         std::unique_ptr<Expr> parseElementValue();
-
         /**
          * Parse an array initializer for annotation value, expect a '{' is consumed already
          * @return pointer of an ArrayInitializerExpr
          */
-        std::unique_ptr<Expr> parseAnnotationArray();
-        std::unique_ptr<Expr> parseAnnotationExpr();
+        std::unique_ptr<Expr> parseElementArray();
+        std::unique_ptr<Expr> parseElementExpr();
 
         /**
          * Parse generic parameters for class declaration or method declaration
