@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "Statements.h"
-#include "main/ast/ASTDef.h"
+#include "main/parser/ast/ASTDef.h"
 
 namespace javac
 {

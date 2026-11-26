@@ -18,10 +18,10 @@ file(GLOB_RECURSE cppjavac_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.qrc"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.inc")
 add_executable(cppjavac ${cppjavac_SOURCES}
-        src/main/ast/parser/_Parser.cpp
-        src/main/ast/parser/ParserUtil.cpp
-        src/main/ast/parser/ParserUtil.h
-        src/main/ast/parser/ParserException.h)
+        src/main/parser/_Parser.cpp
+        src/main/parser/ParserUtil.cpp
+        src/main/parser/ParserUtil.h
+        src/main/parser/ParserException.h)
 target_include_directories(cppjavac PRIVATE src)
 set_target_properties(cppjavac PROPERTIES OUTPUT_NAME javac)
 

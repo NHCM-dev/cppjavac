@@ -6,6 +6,9 @@
 
 #include <utility>
 
+#include "ParserException.h"
+#include "ParserUtil.h"
+
 namespace javac
 {
     Parser::Parser(TokenStream inputStream, Path filePath, std::set<JavacExtension> extensions, LangLevel sourceLangLevel)

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "main/ast/ASTDef.h"
+#include "main/parser/ast/ASTDef.h"
 
 namespace javac
 {

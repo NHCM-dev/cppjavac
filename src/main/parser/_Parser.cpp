@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+#include "ParserException.h"
+
 namespace javac
 {
     void Parser::errorProcessPlaceholder()

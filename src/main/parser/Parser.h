@@ -5,14 +5,13 @@
 #ifndef JAVACOMPILER_PARSER_H
 #define JAVACOMPILER_PARSER_H
 
-#include "ParserUtil.h"
 #include <vector>
 
-#include "main/ast/astdefs/Declarations.h"
-#include "main/ast/astdefs/Expressions.h"
+#include "ast/ASTDef.h"
+#include "main/parser/ast/astdefs/Declarations.h"
+#include "main/parser/ast/astdefs/Expressions.h"
 #include "main/core/def/Extension.h"
 #include "main/lexer/LexerDef.h"
-#include "ParserException.h"
 
 namespace javac
 {
