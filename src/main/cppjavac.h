@@ -18,7 +18,7 @@ namespace javac
 
     inline Compiler* compiler = nullptr;
 
-    inline constexpr std::vector<std::string> args;
+    inline std::vector<std::string> args;
     inline JavacConfig* config = nullptr;
 
     inline uint64_t startTime = 0;
