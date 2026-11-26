@@ -30,8 +30,10 @@ namespace javac
         OutOfRangeNumberLiteral,
 
         KeywordInTypeSpecification,
+
         VoidInParameterTypeSpecification,
         KeywordInParameterTypeSpecification,
+        DuplicateFinalInParameterTypeSpecification,
 
         TypeArgUnboundUndefinedBehaviour,
 

@@ -422,8 +422,7 @@ namespace javac
                 {
                     if (seenFinal)
                     {
-                        throw parser_exception(ParserExceptionType::KeywordInParameterTypeSpecification,
-                            peek(), "Duplicate 'final' on parameter");
+                        throw parser_exception(ParserExceptionType::DuplicateFinalInParameterTypeSpecification,peek());
                     }
                     advance();
                     seenFinal = true;
