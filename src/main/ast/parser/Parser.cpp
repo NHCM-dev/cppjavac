@@ -208,14 +208,24 @@ namespace javac
                 if (matchKeyword(EXTENDS))
                 {
                     arg.genericType = GenericType::Extends;
+                    const Token& token = peek();
                     arg.type = std::make_unique<TypeNode>(parseTypeNode());
+                    if (!jcutils::canGeneric(*arg.type))
+                    {
+                        throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
+                    }
                     typeArgs.push_back(std::move(arg));
                     continue;
                 }
                 if (matchKeyword(SUPER))
                 {
                     arg.genericType = GenericType::Super;
+                    const Token& token = peek();
                     arg.type = std::make_unique<TypeNode>(parseTypeNode());
+                    if (!jcutils::canGeneric(*arg.type))
+                    {
+                        throw parser_exception(ParserExceptionType::CannotBeSuper, token);
+                    }
                     typeArgs.push_back(std::move(arg));
                     continue;
                 }
@@ -224,8 +234,16 @@ namespace javac
                 continue;
             }
             arg.genericType = GenericType::Exact;
+            const Token& token = peek();
             arg.type = std::make_unique<TypeNode>(parseTypeNode(std::move(pendingAnnotations)));
-
+            const bool allowPrimitive = jcutils::contains(extensions, JavacExtension::AllowPrimitiveGenerics);
+            if (!jcutils::canGeneric(*arg.type, allowPrimitive))
+            {
+                const auto error = allowPrimitive && arg.type->objectType == ObjectType::Void
+                    ? ParserExceptionType::EXTENSION_VoidInGeneric
+                    : ParserExceptionType::InvalidExactGeneric;
+                throw parser_exception(error, token);
+            }
             typeArgs.push_back(std::move(arg));
         } while (matchSymbol(SymbolType::Comma));
         return typeArgs;
@@ -281,7 +299,12 @@ namespace javac
                     throw parser_exception(ParserExceptionType::MultipleExtends, peek());
                 }
                 extended = true;
+                const Token& token = peek();
                 decl.superClass = parseTypeNode();
+                if (!jcutils::canExtImplTo(*decl.superClass))
+                {
+                    throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
+                }
                 tryTime++;
             } else if (matchKeyword(IMPLEMENTS))
             {
@@ -292,7 +315,13 @@ namespace javac
                 interfaces = true;
                 do
                 {
-                    decl.interfaces.push_back(parseTypeNode());
+                    const Token& token = peek();
+                    TypeNode type = parseTypeNode();
+                    if (!jcutils::canExtImplTo(type))
+                    {
+                        throw parser_exception(ParserExceptionType::CannotImplementsTo, token);
+                    }
+                    decl.interfaces.push_back(std::move(type));
                 } while (matchSymbol(SymbolType::Comma));
                 tryTime++;
             } else if (matchKeyword(PERMITS))
@@ -304,7 +333,13 @@ namespace javac
                 permitted = true;
                 do
                 {
-                    decl.permittedTypes.push_back(parseTypeNode());
+                    const Token& token = peek();
+                    TypeNode type = parseTypeNode();
+                    if (!jcutils::canPermit(type))
+                    {
+                        throw parser_exception(ParserExceptionType::CannotPermitsTo, token);
+                    }
+                    decl.permittedTypes.push_back(std::move(type));
                 } while (matchSymbol(SymbolType::Comma));
                 tryTime++;
             }
@@ -426,7 +461,13 @@ namespace javac
             {
                 do
                 {
-                    parameter.bounds.push_back(parseTypeNode());
+                    const Token& token = peek();
+                    TypeNode type = parseTypeNode();
+                    if (!jcutils::canExtImplTo(type))
+                    {
+                        throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
+                    }
+                    parameter.bounds.push_back(std::move(type));
                 }
                 while (matchSymbol(SymbolType::Ampersand));
             }

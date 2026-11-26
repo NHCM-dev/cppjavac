@@ -11,6 +11,8 @@ namespace javac
 {
     enum class ParserExceptionType : uint8_t
     {
+        EXTENSION_VoidInGeneric,
+
         ExpectSymbol,
         ExpectKeyword,
         ExpectIdentifier,
@@ -30,6 +32,12 @@ namespace javac
         KeywordInTypeSpecification,
 
         TypeArgUnboundUndefinedBehaviour,
+
+        CannotExtendsTo,
+        CannotBeSuper,
+        CannotImplementsTo,
+        CannotPermitsTo,
+        InvalidExactGeneric,
     };
 
     class parser_exception : public std::logic_error
@@ -39,13 +47,13 @@ namespace javac
         const std::optional<Token> actualToken = std::nullopt;
 
         parser_exception(ParserExceptionType exception)
-            : logic_error({}), exception(exception)
+            : logic_error(""), exception(exception)
         {
 
         }
 
         parser_exception(ParserExceptionType exception, Token actualToken)
-            : logic_error({}), exception(exception), actualToken(actualToken)
+            : logic_error(""), exception(exception), actualToken(actualToken)
         {
 
         }

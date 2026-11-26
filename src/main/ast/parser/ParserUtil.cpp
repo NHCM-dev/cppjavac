@@ -109,4 +109,35 @@ namespace jcutils
     {
         return input == u"true";
     }
+
+    bool isActualClass(const javac::TypeNode& typeNode)
+    {
+        return typeNode.objectType == javac::ObjectType::Class
+            || typeNode.objectType == javac::ObjectType::GenericClass;
+    }
+
+    bool isPrimitive(const javac::TypeNode& typeNode)
+    {
+        return typeNode.objectType == javac::ObjectType::Primitive;
+    }
+
+    bool canExtImplTo(const javac::TypeNode& typeNode)
+    {
+        return isActualClass(typeNode);
+    }
+
+    bool canPermit(const javac::TypeNode& typeNode)
+    {
+        return typeNode.objectType == javac::ObjectType::Class
+            && std::ranges::none_of(typeNode.nameParts, [](const javac::TypeNamePart& part)
+            {
+                return !part.annotations.empty();
+            });
+    }
+
+    bool canGeneric(const javac::TypeNode& typeNode, bool allowPrimitive)
+    {
+        return isActualClass(typeNode) || typeNode.objectType == javac::ObjectType::Array
+            || (allowPrimitive && isPrimitive(typeNode));
+    }
 } // jcutils

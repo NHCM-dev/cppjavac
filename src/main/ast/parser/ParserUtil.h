@@ -7,6 +7,7 @@
 #include <string_view>
 #include <stdexcept>
 
+#include "main/ast/ASTDef.h"
 #include "main/core/def/JavaDef.h"
 
 namespace jcutils
@@ -35,6 +36,16 @@ namespace jcutils
     bool is32Float(std::u16string_view str);
 
     javac::jboolean boolFromString(std::u16string_view input);
+
+    bool isActualClass(const javac::TypeNode& typeNode);
+    bool isPrimitive(const javac::TypeNode& typeNode);
+
+    // Check the written type form for extends, implements or a declared type parameter bound.
+    bool canExtImplTo(const javac::TypeNode& typeNode);
+    // Check the type name in a permits clause.
+    bool canPermit(const javac::TypeNode& typeNode);
+    // Check a type argument or wildcard bound. Allow primitives only for exact arguments.
+    bool canGeneric(const javac::TypeNode& typeNode, bool allowPrimitive = false);
 } // jcutils
 
 #endif //CPPJAVAC_PARSERUTIL_H
