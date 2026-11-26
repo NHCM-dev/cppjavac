@@ -120,7 +120,7 @@ namespace javac
          * Annotations are automatically process, include the prefix one
          * @return parsed ArrayDimensions or empty if nothing parsed
          */
-        std::vector<ArrayDimension> parseArrayDimension();
+        std::vector<ArrayDimension> parseArrayDimension(bool allowAnnotation = true);
 
         // Parse TypeArg defined within <...>, Like "String" in "List<String>"
         // It must be specific type or unbound, not for class generic parameter declaration

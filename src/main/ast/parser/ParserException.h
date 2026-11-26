@@ -33,11 +33,16 @@ namespace javac
 
         TypeArgUnboundUndefinedBehaviour,
 
+        AnnotationInArrayDimension,
+
         CannotExtendsTo,
         CannotBeSuper,
         CannotImplementsTo,
         CannotPermitsTo,
         InvalidExactGeneric,
+
+        GenericInClassLiteral,
+        KeywordInClassLiteral,
     };
 
     class parser_exception : public std::logic_error

@@ -181,11 +181,16 @@ namespace javac
         return finishType();
     }
 
-    std::vector<ArrayDimension> Parser::parseArrayDimension()
+    std::vector<ArrayDimension> Parser::parseArrayDimension(bool allowAnnotation)
     {
         std::vector<ArrayDimension> dimensions;
         while (checkSymbol(SymbolType::LBracket) || checkSymbol(SymbolType::AtSign))
         {
+            if (!allowAnnotation && checkSymbol(SymbolType::AtSign))
+            {
+                throw parser_exception(ParserExceptionType::AnnotationInArrayDimension, peek());
+            }
+
             ArrayDimension dimension;
             dimension.annotations = parseAnnotations();
             expectSymbol(SymbolType::LBracket);
@@ -534,6 +539,113 @@ namespace javac
 
     std::unique_ptr<ClassLiteralExpr> Parser::parseClassLiteral()
     {
-        //TODO: implementation required
+        TypeNode node;
+
+        const auto finishType = [this, &node]
+        {
+            if (node.objectType != ObjectType::Void)
+            {
+                auto dimensions = parseArrayDimension(false);
+                if (!dimensions.empty())
+                {
+                    TypeNode array;
+                    array.objectType = ObjectType::Array;
+                    array.elementType = std::make_unique<TypeNode>(std::move(node));
+                    array.dimensions = std::move(dimensions);
+                    node = std::move(array);
+                }
+            }
+
+            expectSymbol(SymbolType::Dot);
+            expectKeyword(CLASS);
+            auto literal = std::make_unique<ClassLiteralExpr>();
+            literal->type = std::move(node);
+            return literal;
+        };
+
+        const auto settlePrimitive = [&node](PrimitiveType type)
+        {
+            node.objectType = ObjectType::Primitive;
+            node.primitiveType = type;
+        };
+
+        if (matchKeyword(VOID))
+        {
+            node.objectType = ObjectType::Void;
+            return finishType();
+        }
+        if (matchKeyword(BOOLEAN))
+        {
+            settlePrimitive(PrimitiveType::Boolean);
+            return finishType();
+        }
+        if (matchKeyword(BYTE))
+        {
+            settlePrimitive(PrimitiveType::Byte);
+            return finishType();
+        }
+        if (matchKeyword(SHORT))
+        {
+            settlePrimitive(PrimitiveType::Short);
+            return finishType();
+        }
+        if (matchKeyword(CHAR))
+        {
+            settlePrimitive(PrimitiveType::Char);
+            return finishType();
+        }
+        if (matchKeyword(INT))
+        {
+            settlePrimitive(PrimitiveType::Int);
+            return finishType();
+        }
+        if (matchKeyword(LONG))
+        {
+            settlePrimitive(PrimitiveType::Long);
+            return finishType();
+        }
+        if (matchKeyword(FLOAT))
+        {
+            settlePrimitive(PrimitiveType::Float);
+            return finishType();
+        }
+        if (matchKeyword(DOUBLE))
+        {
+            settlePrimitive(PrimitiveType::Double);
+            return finishType();
+        }
+
+        while (true)
+        {
+            if (checkKeyword() && !checkIdentifier())
+            {
+                throw parser_exception(ParserExceptionType::KeywordInClassLiteral, peek());
+            }
+
+            TypeNamePart namePart;
+            const auto& name = expectIdentifier();
+            namePart.name = name.content;
+
+            if (checkSymbol(SymbolType::LAngleBracket))
+            {
+                throw parser_exception(ParserExceptionType::GenericInClassLiteral, peek());
+            }
+
+            node.nameParts.push_back(std::move(namePart));
+            if (!checkSymbol(SymbolType::Dot) || peek(1).keyword == CLASS)
+            {
+                const auto* keyword = findKeywordUtf16(name.content);
+                if (keyword && keyword->isSupported(sourceLangLevel)
+                    && (*keyword == VAR || *keyword == YIELD || *keyword == RECORD
+                        || *keyword == SEALED || *keyword == PERMITS))
+                {
+                    throw parser_exception(ParserExceptionType::KeywordInClassLiteral, name);
+                }
+                break;
+            }
+            advance();
+        }
+
+        return finishType();
     }
 } // javac
