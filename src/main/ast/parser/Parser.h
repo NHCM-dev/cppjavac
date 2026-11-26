@@ -146,6 +146,11 @@ namespace javac
         Annotation parseAnnotation();
         AnnotationArg parseAnnotationArg();
         std::unique_ptr<Expr> parseAnnotationValue();
+
+        /**
+         * Parse an array initializer for annotation value, expect a '{' is consumed already
+         * @return pointer of an ArrayInitializerExpr
+         */
         std::unique_ptr<Expr> parseAnnotationArray();
         std::unique_ptr<Expr> parseAnnotationExpr();
 

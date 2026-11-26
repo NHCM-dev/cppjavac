@@ -395,7 +395,7 @@ namespace javac
 
     std::unique_ptr<Expr> Parser::parseAnnotationValue()
     {
-        if (matchSymbol(SymbolType::AtSign))
+        if (checkSymbol(SymbolType::AtSign))
         {
             return std::make_unique<Annotation>(parseAnnotation());
         }
@@ -410,8 +410,16 @@ namespace javac
 
     std::unique_ptr<Expr> Parser::parseAnnotationArray()
     {
-        //TODO: implement array value
+        ArrayInitializerExpr arrayInitializer = {};
+        if (!checkSymbol(SymbolType::RBrace) && !matchSymbol(SymbolType::Comma))
+        {
+            do
+            {
+                arrayInitializer.elements.push_back(parseAnnotationValue());
+            } while (matchSymbol(SymbolType::Comma) && !checkSymbol(SymbolType::RBrace));
+        }
         expectSymbol(SymbolType::RBrace);
+        return std::make_unique<ArrayInitializerExpr>(std::move(arrayInitializer));
     }
 
     std::unique_ptr<Expr> Parser::parseAnnotationExpr()
