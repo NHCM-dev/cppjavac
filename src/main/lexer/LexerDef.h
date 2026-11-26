@@ -157,7 +157,7 @@ namespace javac
     struct Token
     {
         TokenType tokenType;
-        std::u16string content;
+        std::u16string content; // Decoded value for string and character literals, spelling otherwise.
         SourceRange range;
 
         std::optional<SymbolType> symbol;

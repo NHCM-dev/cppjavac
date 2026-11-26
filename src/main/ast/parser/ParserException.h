@@ -30,6 +30,8 @@ namespace javac
         OutOfRangeNumberLiteral,
 
         KeywordInTypeSpecification,
+        VoidInParameterTypeSpecification,
+        KeywordInParameterTypeSpecification,
 
         TypeArgUnboundUndefinedBehaviour,
 
@@ -43,6 +45,8 @@ namespace javac
 
         GenericInClassLiteral,
         KeywordInClassLiteral,
+        InvalidThrowsType,
+        UnsupportedParameterDefault,
     };
 
     class parser_exception : public std::logic_error

@@ -82,12 +82,13 @@ namespace javac
 
     }
 
-    TypeNode Parser::parseTypeNode(std::vector<Annotation> leadingAnnotations)
+    TypeNode Parser::parseTypeNode(std::vector<Annotation> leadingAnnotations,
+        std::optional<ArrayDimension>* varargs)
     {
         TypeNode node;
-        const auto finishType = [this, &node]() -> TypeNode
+        const auto finishType = [this, &node, varargs]() -> TypeNode
         {
-            std::vector<ArrayDimension> dimensions = parseArrayDimension();
+            std::vector<ArrayDimension> dimensions = parseArrayDimension(true, varargs);
             if (dimensions.empty())
             {
                 return std::move(node);
@@ -162,11 +163,7 @@ namespace javac
             if (matchSymbol(SymbolType::LAngleBracket))
             {
                 node.objectType = ObjectType::GenericClass;
-                namePart.diamond = checkSymbol(SymbolType::RAngleBracket);
-                if (!namePart.diamond)
-                {
-                    namePart.typeArguments = parseTypeArgs();
-                }
+                namePart.typeArguments = parseTypeArgs();
                 expectTypeClose();
             }
 
@@ -181,10 +178,12 @@ namespace javac
         return finishType();
     }
 
-    std::vector<ArrayDimension> Parser::parseArrayDimension(bool allowAnnotation)
+    std::vector<ArrayDimension> Parser::parseArrayDimension(bool allowAnnotation,
+        std::optional<ArrayDimension>* varargs)
     {
         std::vector<ArrayDimension> dimensions;
-        while (checkSymbol(SymbolType::LBracket) || checkSymbol(SymbolType::AtSign))
+        while (checkSymbol(SymbolType::LBracket) || checkSymbol(SymbolType::AtSign)
+            || (varargs && checkSymbol(SymbolType::Ellipsis)))
         {
             if (!allowAnnotation && checkSymbol(SymbolType::AtSign))
             {
@@ -193,6 +192,11 @@ namespace javac
 
             ArrayDimension dimension;
             dimension.annotations = parseAnnotations();
+            if (varargs && matchSymbol(SymbolType::Ellipsis))
+            {
+                *varargs = std::move(dimension);
+                break;
+            }
             expectSymbol(SymbolType::LBracket);
             expectSymbol(SymbolType::RBracket);
             dimensions.push_back(std::move(dimension));
@@ -241,7 +245,7 @@ namespace javac
             arg.genericType = GenericType::Exact;
             const Token& token = peek();
             arg.type = std::make_unique<TypeNode>(parseTypeNode(std::move(pendingAnnotations)));
-            const bool allowPrimitive = jcutils::contains(extensions, JavacExtension::AllowPrimitiveGenerics);
+            const bool allowPrimitive = extensionEnabled(JavacExtension::AllowPrimitiveGenerics);
             if (!jcutils::canGeneric(*arg.type, allowPrimitive))
             {
                 const auto error = allowPrimitive && arg.type->objectType == ObjectType::Void
@@ -331,10 +335,142 @@ namespace javac
         return decl;
     }
 
-
-    MethodDecl Parser::parseMethodDecl()
+    FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers)
     {
 
+    }
+
+    MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
+    {
+        MethodDecl methodDecl;
+        methodDecl.modifiers = std::move(modifiers);
+        if (checkSymbol(SymbolType::LAngleBracket))
+        {
+            methodDecl.typeParameters = parseGenericParameters();
+        }
+
+        std::vector<Annotation> retAnnotations;
+        if (checkSymbol(SymbolType::AtSign))
+        {
+            retAnnotations = parseAnnotations();
+        }
+        TypeNode returnType = parseTypeNode(std::move(retAnnotations));
+        methodDecl.returnType = std::move(returnType);
+
+        methodDecl.receiverParam = std::move(receiverParameter);
+        methodDecl.name = expectIdentifier().content;
+
+        expectSymbol(SymbolType::LParen);
+        methodDecl.parameters = parseMethodParameters();
+
+        if (methodDecl.returnType.objectType != ObjectType::Void)
+        {
+            methodDecl.returnDimensions = parseArrayDimension();
+        }
+
+        if (matchKeyword(THROWS))
+        {
+            do
+            {
+                const auto& typeStart = peek();
+                TypeNode type = parseTypeNode();
+                if (!jcutils::canExtImplTo(type))
+                {
+                    throw parser_exception(ParserExceptionType::InvalidThrowsType, typeStart);
+                }
+                methodDecl.thrownTypes.push_back(std::move(type));
+            } while (matchSymbol(SymbolType::Comma));
+        } else if (matchKeyword(DEFAULT))
+        {
+            methodDecl.defaultValue = parseElementValue();
+            expectSymbol(SymbolType::Semicolon);
+            return methodDecl;
+        }
+
+        if (matchSymbol(SymbolType::Semicolon))
+        {
+            return methodDecl;
+        }
+
+        methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
+
+        return methodDecl;
+    }
+
+    std::vector<std::unique_ptr<ParameterDecl>> Parser::parseMethodParameters()
+    {
+        std::vector<std::unique_ptr<ParameterDecl>> decls;
+        if (matchSymbol(SymbolType::RParen))
+        {
+            return decls;
+        }
+
+        do
+        {
+            auto parameter = std::make_unique<ParameterDecl>();
+            bool seenFinal = false;
+            while (checkKeyword(FINAL) || (checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE))
+            {
+                for (auto& annotation : parseAnnotations())
+                {
+                    ModifierFlag modifier;
+                    modifier.annotation = std::move(annotation);
+                    parameter->modifiers.push_back(std::move(modifier));
+                }
+
+                if (checkKeyword(FINAL))
+                {
+                    if (seenFinal)
+                    {
+                        throw parser_exception(ParserExceptionType::KeywordInParameterTypeSpecification,
+                            peek(), "Duplicate 'final' on parameter");
+                    }
+                    advance();
+                    seenFinal = true;
+                    ModifierFlag modifier;
+                    modifier.flagType = FlagType::Final;
+                    parameter->modifiers.push_back(std::move(modifier));
+                }
+            }
+
+            const Token& typeStart = peek();
+            parameter->type = parseTypeNode({}, &parameter->varargs);
+            if (parameter->type->objectType == ObjectType::Void)
+            {
+                throw parser_exception(ParserExceptionType::VoidInParameterTypeSpecification,typeStart);
+            }
+            parameter->name = expectIdentifier().content;
+            if (!parameter->varargs)
+            {
+                parameter->dimensions = parseArrayDimension();
+            }
+
+            if (extensionEnabled(JavacExtension::AllowDefaultParameters) && checkSymbol(SymbolType::Assign))
+            {
+                //TODO: Implement default value parsing (extension)
+                throw parser_exception(ParserExceptionType::UnsupportedParameterDefault, peek());
+            }
+
+            const bool isVarargs = parameter->varargs.has_value();
+            decls.push_back(std::move(parameter));
+            if (isVarargs)
+            {
+                break;
+            }
+        } while (matchSymbol(SymbolType::Comma));
+
+        expectSymbol(SymbolType::RParen);
+        return decls;
+    }
+
+    BlockStatement Parser::parseMethodBody()
+    {
+        expectSymbol(SymbolType::LBrace);
+
+        //TODO: Implement parse the body
+
+        expectSymbol(SymbolType::RBrace);
+        return {};
     }
 
     std::vector<Annotation> Parser::parseAnnotations()
@@ -366,11 +502,19 @@ namespace javac
             {
                 return annotation;
             }
-            do
+            if (checkIdentifier() && peek(1).symbol == SymbolType::Assign)
             {
-                AnnotationArg arg = parseAnnotationArg();
+                do
+                {
+                    annotation.arguments.push_back(parseAnnotationArg());
+                } while (matchSymbol(SymbolType::Comma));
+            }
+            else
+            {
+                AnnotationArg arg;
+                arg.value = parseElementValue();
                 annotation.arguments.push_back(std::move(arg));
-            } while (matchSymbol(SymbolType::Comma));
+            }
 
             expectSymbol(SymbolType::RParen);
         }
@@ -382,18 +526,14 @@ namespace javac
         // TODO: Parse annotation arguments.
 
         AnnotationArg arg = {};
-        if (checkIdentifier())
-        {
-            arg.name = expectIdentifier().content;
-            expectSymbol(SymbolType::Assign);
-        }
-
-        arg.value = parseAnnotationValue();
+        arg.name = expectIdentifier().content;
+        expectSymbol(SymbolType::Assign);
+        arg.value = parseElementValue();
 
         return arg;
     }
 
-    std::unique_ptr<Expr> Parser::parseAnnotationValue()
+    std::unique_ptr<Expr> Parser::parseElementValue()
     {
         if (checkSymbol(SymbolType::AtSign))
         {
@@ -415,7 +555,7 @@ namespace javac
         {
             do
             {
-                arrayInitializer.elements.push_back(parseAnnotationValue());
+                arrayInitializer.elements.push_back(parseElementValue());
             } while (matchSymbol(SymbolType::Comma) && !checkSymbol(SymbolType::RBrace));
         }
         expectSymbol(SymbolType::RBrace);
@@ -518,13 +658,13 @@ namespace javac
             case TokenType::StringLiteral:
             {
                 StringExpr stringExpr;
-                stringExpr.value = peek().content;
+                stringExpr.value = token.content;
                 return  std::make_unique<StringExpr>(stringExpr);
             }
             case TokenType::CharacterLiteral:
             {
                 CharExpr charExpr;
-                charExpr.value = peek().content.at(0);
+                charExpr.value = token.content.front();
                 return  std::make_unique<CharExpr>(charExpr);
             }
             case TokenType::BooleanLiteral:

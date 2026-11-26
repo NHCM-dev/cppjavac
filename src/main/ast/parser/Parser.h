@@ -41,6 +41,9 @@ namespace javac
         [[nodiscard]]
         const std::vector<Token>& tokens() const;
 
+        // Return if an extension is enabled
+        bool extensionEnabled(JavacExtension extension) const;
+
         /**
          * Read token at X offset
          * Invoke without arg to get current token
@@ -111,16 +114,19 @@ namespace javac
         /**
          * Parse a TypeNode if you are sure that from this token it is going to be a type specification
          * Will auto proces annotations at the front
+         * When varargs is supplied, consumes and records a trailing annotated or bare ellipsis.
          * @return TypeNode parsed
          */
-        TypeNode parseTypeNode(std::vector<Annotation> annotations = {});
+        TypeNode parseTypeNode(std::vector<Annotation> annotations = {},
+            std::optional<ArrayDimension>* varargs = nullptr);
 
         /**
          * Parse a vector of ArrayDimension for type specification
          * Annotations are automatically process, include the prefix one
          * @return parsed ArrayDimensions or empty if nothing parsed
          */
-        std::vector<ArrayDimension> parseArrayDimension(bool allowAnnotation = true);
+        std::vector<ArrayDimension> parseArrayDimension(bool allowAnnotation = true,
+            std::optional<ArrayDimension>* varargs = nullptr);
 
         // Parse TypeArg defined within <...>, Like "String" in "List<String>"
         // It must be specific type or unbound, not for class generic parameter declaration
@@ -136,8 +142,22 @@ namespace javac
          */
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
         ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {});
-        MethodDecl parseMethodDecl();
+        FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers = {});
 
+
+        // Method declaration
+        MethodDecl parseMethodDecl(std::vector<ModifierFlag> modifiers = {},
+         std::optional<ReceiverParameter> receiverParameter = std::nullopt);
+        /**
+         * Parse parameters declaration in the parenthesis of a method declaration
+         * Expect that a '(' token has been consumed. This function will consume a ')' token at the end
+         * @throws parser_exception if failed to parse parameters
+         * @return parsed method parameters
+         */
+        std::vector<std::unique_ptr<ParameterDecl>> parseMethodParameters();
+        BlockStatement parseMethodBody();
+
+        // Annotation declaration
         /**
          * Try parse annotations, will consume an '@' symbol token
          * @return a vector of parsed annotations or empty if nothing parsed
@@ -145,7 +165,11 @@ namespace javac
         std::vector<Annotation> parseAnnotations();
         Annotation parseAnnotation();
         AnnotationArg parseAnnotationArg();
-        std::unique_ptr<Expr> parseAnnotationValue();
+        /**
+         * Parse value for both the value fit in annotation declaration and method default value declaration
+         * @return parsed expression for the value
+         */
+        std::unique_ptr<Expr> parseElementValue();
 
         /**
          * Parse an array initializer for annotation value, expect a '{' is consumed already
@@ -154,6 +178,11 @@ namespace javac
         std::unique_ptr<Expr> parseAnnotationArray();
         std::unique_ptr<Expr> parseAnnotationExpr();
 
+        /**
+         * Parse generic parameters for class declaration or method declaration
+         * Like "<T extends X>"
+         * @return parsed GenericParameters
+         */
         std::vector<GenericParameter> parseGenericParameters();
 
         /**

@@ -75,7 +75,7 @@ namespace javac
         isEscaping = false;
         needEndCommentType = TokenType::Invalid;
 
-        std::size_t literalLength = 0;
+        std::u16string literalValue;
         bool invalidEscape = false;
         std::vector<std::size_t> sourceOffsets;
         std::u16string translated;
@@ -106,6 +106,8 @@ namespace javac
             tokenBuffer.clear();
         };
 
+        constexpr std::u16string_view escapes = u"btnfr\"'\\";
+        constexpr std::u16string_view escapeValues = u"\b\t\n\f\r\"'\\";
         const auto isDecimalDigit = [](char16_t ch) { return ch >= u'0' && ch <= u'9'; };
         const auto isHexDigit = [&](char16_t ch) {
             return isDecimalDigit(ch) || (ch >= u'a' && ch <= u'f') || (ch >= u'A' && ch <= u'F');
@@ -203,19 +205,25 @@ namespace javac
                     {
                         const std::size_t limit = currentChar <= u'3' ? 3 : 2;
                         std::size_t length = 1;
+                        char16_t value = currentChar - u'0';
                         while (length < limit && offset + length < sourceSize
                             && source[offset + length] >= u'0' && source[offset + length] <= u'7')
                         {
+                            value = static_cast<char16_t>(value * 8 + (source[offset + length] - u'0'));
                             ++length;
                         }
                         appendRest(length);
+                        literalValue += value;
                     }
-                    else if (std::u16string_view(u"btnfr\"'\\").find(currentChar) == std::u16string_view::npos)
+                    else if (const auto index = escapes.find(currentChar); index != escapes.npos)
+                    {
+                        literalValue += escapeValues[index];
+                    }
+                    else
                     {
                         invalidEscape = true;
                     }
                     isEscaping = false;
-                    ++literalLength;
                     continue;
                 }
                 if (currentChar == u'\\')
@@ -229,20 +237,21 @@ namespace javac
                     {
                         pushInvalid(InvalidTokenType::InvalidEscapeSequence);
                     }
-                    else if (needEndChar && literalLength != 1)
+                    else if (needEndChar && literalValue.size() != 1)
                     {
-                        pushInvalid(literalLength == 0 ? InvalidTokenType::EmptyCharacterLiteral
+                        pushInvalid(literalValue.empty() ? InvalidTokenType::EmptyCharacterLiteral
                                                        : InvalidTokenType::TooLargeCharacterLiteral);
                     }
                     else
                     {
+                        tokenBuffer.swap(literalValue);
                         pushToken(needEndChar ? TokenType::CharacterLiteral : TokenType::StringLiteral);
                     }
                     needEndString = false;
                     needEndChar = false;
                     continue;
                 }
-                ++literalLength;
+                literalValue += currentChar;
                 continue;
             }
 
@@ -279,7 +288,7 @@ namespace javac
             {
                 needEndString = currentChar == u'"';
                 needEndChar = currentChar == u'\'';
-                literalLength = 0;
+                literalValue.clear();
                 invalidEscape = false;
                 continue;
             }

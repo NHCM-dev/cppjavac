@@ -28,6 +28,11 @@ namespace javac
         return this->inputStream.tokens;
     }
 
+    bool Parser::extensionEnabled(JavacExtension extension) const
+    {
+        return jcutils::contains(extensions, extension);
+    }
+
     const Token& Parser::peek(std::size_t offset) const
     {
         if (offset == 0 && typeCloseRemainder && typeCloseRemainder->first == tokenPointer)
