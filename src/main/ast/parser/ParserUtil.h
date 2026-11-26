@@ -13,14 +13,14 @@
 namespace jcutils
 {
     /**
-     * Parse u16 string as int64 which is long in java def
+     * Parse a Java integer literal and return its signed value.
      * @throw std::invalid_argument if entered string is invalid
-     * @throw std::out_of_range if entered string is out of int64_t range
-     * @param str UTF-16 decimal integer with an optional sign and l/L suffix
+     * @throw std::out_of_range if the value is outside the literal's int or long range
+     * @param str UTF-16 integer with an optional sign and l/L suffix
      * @return parsed int64_t result
      */
     javac::jlong int64FromString(std::u16string_view str);
-    // Return true if the value is outside int32_t or the parsed spelling has an l/L suffix.
+    // Check the l/L suffix when a spelling is provided, otherwise check the int32_t range.
     bool int64IsLong(javac::jlong val, std::u16string_view spelling = {});
 
     /**
@@ -31,6 +31,9 @@ namespace jcutils
      * @return parsed double value
      */
     javac::jdouble doubleFromString(std::u16string_view str);
+
+    // Parse at float precision with the same syntax and exceptions as doubleFromString.
+    javac::jfloat floatFromString(std::u16string_view str);
 
     // Return true if the spelling is a Java floating-point literal with an f/F suffix.
     bool is32Float(std::u16string_view str);

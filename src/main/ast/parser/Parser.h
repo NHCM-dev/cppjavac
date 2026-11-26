@@ -50,6 +50,7 @@ namespace javac
         [[nodiscard]]
         const Token& peek(size_t offset = 0) const;
         // consume current token and make pointer+1
+        // Returns the current token (not next)
         const Token& advance();
         // Return true if current pointer reached EOF
         [[nodiscard]]
@@ -151,8 +152,8 @@ namespace javac
         std::vector<GenericParameter> parseGenericParameters();
 
         /**
-         * Treat next token as basic literal (string, int, etc) and try to parse it
-         * @throw parser_exception if next token is not a valid basic literal
+         * Treat current token as basic literal (string, int, etc) and try to parse it
+         * @throw parser_exception if rhw token is not a valid basic literal
          * @return parsed basic literal
          */
         std::unique_ptr<Expr> parseBasicLiteral();

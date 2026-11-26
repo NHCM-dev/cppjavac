@@ -70,10 +70,10 @@ int main(int argc, char** argv)
     }
 
     javac::compiler = new javac::Compiler();
-    int exitCode = javac::compiler->run();
+    bool success = javac::compiler->run();
 
     delete javac::compiler;
     delete javac::config;
 
-    return exitCode;
+    return success ? 0 : -1;
 }

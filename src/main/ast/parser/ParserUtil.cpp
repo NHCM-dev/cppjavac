@@ -5,6 +5,7 @@
 #include "ParserUtil.h"
 
 #include <algorithm>
+#include <bit>
 #include <charconv>
 #include <limits>
 
@@ -18,44 +19,82 @@ namespace jcutils
         return str.ends_with(u'l') || str.ends_with(u'L');
     }
 
+    static std::string normalizeNumber(std::u16string_view str)
+    {
+        auto number = EncodingTool::utf16ToUtf8(str);
+        std::erase(number, '_');
+        return number;
+    }
+
     javac::jlong int64FromString(std::u16string_view str)
     {
-        if (hasLongSuffix(str))
+        const bool negative = str.starts_with(u'-');
+        if (negative || str.starts_with(u'+'))
+        {
+            str.remove_prefix(1);
+        }
+        if (!isInteger(str))
+        {
+            throw std::invalid_argument("Invalid integer literal");
+        }
+
+        const bool wide = hasLongSuffix(str);
+        if (wide)
         {
             str.remove_suffix(1);
         }
-        if (str.starts_with(u'+'))
+
+        int base = 10;
+        if (str.starts_with(u"0x") || str.starts_with(u"0X"))
         {
-            str.remove_prefix(1);
-            if (str.starts_with(u'-'))
-            {
-                throw std::invalid_argument("Invalid integer string");
-            }
+            base = 16;
+            str.remove_prefix(2);
+        }
+        else if (str.starts_with(u"0b") || str.starts_with(u"0B"))
+        {
+            base = 2;
+            str.remove_prefix(2);
+        }
+        else if (str.size() > 1 && str.front() == u'0')
+        {
+            base = 8;
         }
 
-        const auto number = EncodingTool::utf16ToUtf8(str);
+        const auto number = normalizeNumber(str);
         const auto end = number.data() + number.size();
-        javac::jlong value;
-        const auto result = std::from_chars(number.data(), end, value);
-        if (result.ptr != end || result.ec == std::errc::invalid_argument)
+        std::uint64_t magnitude = 0;
+        const auto result = std::from_chars(number.data(), end, magnitude, base);
+        const std::uint64_t signedMax = wide
+            ? std::numeric_limits<std::int64_t>::max() : std::numeric_limits<std::int32_t>::max();
+        const std::uint64_t limit = base == 10 ? signedMax + negative
+            : (wide ? std::numeric_limits<std::uint64_t>::max() : std::numeric_limits<std::uint32_t>::max());
+        if (result.ec == std::errc::result_out_of_range || magnitude > limit)
         {
-            throw std::invalid_argument("Invalid integer string");
+            throw std::out_of_range("Integer literal out of range");
         }
-        if (result.ec == std::errc::result_out_of_range)
+        if (result.ec != std::errc{} || result.ptr != end)
         {
-            throw std::out_of_range("Integer overflow");
+            throw std::invalid_argument("Invalid integer literal");
         }
-        return value;
+
+        // Non-decimal literals use the entire bit width of their declared type.
+        const auto bits = negative ? std::uint64_t{0} - magnitude : magnitude;
+        return wide ? std::bit_cast<std::int64_t>(bits)
+            : std::bit_cast<std::int32_t>(static_cast<std::uint32_t>(bits));
     }
 
     bool int64IsLong(javac::jlong val, std::u16string_view spelling)
     {
-        return hasLongSuffix(spelling)
-            || val < std::numeric_limits<std::int32_t>::min()
+        if (!spelling.empty())
+        {
+            return hasLongSuffix(spelling);
+        }
+        return val < std::numeric_limits<std::int32_t>::min()
             || val > std::numeric_limits<std::int32_t>::max();
     }
 
-    javac::jdouble doubleFromString(std::u16string_view str)
+    template<typename Float>
+    static Float floatingFromString(std::u16string_view str)
     {
         const bool negative = str.starts_with(u'-');
         if (negative || str.starts_with(u'+'))
@@ -82,22 +121,30 @@ namespace jcutils
         {
             str.remove_prefix(2);
         }
-        auto number = EncodingTool::utf16ToUtf8(str);
-        std::erase(number, '_');
-
-        javac::jdouble value;
+        const auto number = normalizeNumber(str);
+        Float value;
         const auto end = number.data() + number.size();
         const auto result = std::from_chars(number.data(), end, value,
             hex ? std::chars_format::hex : std::chars_format::general);
         if (result.ec == std::errc::result_out_of_range)
         {
-            throw std::out_of_range("Floating-point number out of double range");
+            throw std::out_of_range("Floating-point literal out of range");
         }
         if (result.ec != std::errc{} || result.ptr != end)
         {
             throw std::invalid_argument("Invalid floating-point number");
         }
         return negative ? -value : value;
+    }
+
+    javac::jfloat floatFromString(std::u16string_view str)
+    {
+        return floatingFromString<javac::jfloat>(str);
+    }
+
+    javac::jdouble doubleFromString(std::u16string_view str)
+    {
+        return floatingFromString<javac::jdouble>(str);
     }
 
     bool is32Float(std::u16string_view str)

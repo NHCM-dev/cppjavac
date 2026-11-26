@@ -281,72 +281,40 @@ namespace javac
             decl.typeParameters = std::move(generics);
         }
 
-        bool extended = false;
-        bool interfaces = false;
-        bool permitted = false;
-        int tryTime = 0;
-
-        while (!checkSymbol(SymbolType::LBrace))
+        if (matchKeyword(EXTENDS))
         {
-            if (tryTime >= 3)
+            const Token& token = peek();
+            decl.superClass = parseTypeNode();
+            if (!jcutils::canExtImplTo(*decl.superClass))
             {
-                throw parser_exception(ParserExceptionType::NeedBraceForClassDeclaration, peek());
+                throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
             }
-            if (matchKeyword(EXTENDS))
+        }
+        if (matchKeyword(IMPLEMENTS))
+        {
+            do
             {
-                if (extended)
-                {
-                    throw parser_exception(ParserExceptionType::MultipleExtends, peek());
-                }
-                extended = true;
                 const Token& token = peek();
-                decl.superClass = parseTypeNode();
-                if (!jcutils::canExtImplTo(*decl.superClass))
+                TypeNode type = parseTypeNode();
+                if (!jcutils::canExtImplTo(type))
                 {
-                    throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
+                    throw parser_exception(ParserExceptionType::CannotImplementsTo, token);
                 }
-                tryTime++;
-            } else if (matchKeyword(IMPLEMENTS))
+                decl.interfaces.push_back(std::move(type));
+            } while (matchSymbol(SymbolType::Comma));
+        }
+        if (matchKeyword(PERMITS))
+        {
+            do
             {
-                if (interfaces)
+                const Token& token = peek();
+                TypeNode type = parseTypeNode();
+                if (!jcutils::canPermit(type))
                 {
-                    throw parser_exception(ParserExceptionType::MultipleImplements, peek());
+                    throw parser_exception(ParserExceptionType::CannotPermitsTo, token);
                 }
-                interfaces = true;
-                do
-                {
-                    const Token& token = peek();
-                    TypeNode type = parseTypeNode();
-                    if (!jcutils::canExtImplTo(type))
-                    {
-                        throw parser_exception(ParserExceptionType::CannotImplementsTo, token);
-                    }
-                    decl.interfaces.push_back(std::move(type));
-                } while (matchSymbol(SymbolType::Comma));
-                tryTime++;
-            } else if (matchKeyword(PERMITS))
-            {
-                if (permitted)
-                {
-                    throw parser_exception(ParserExceptionType::MultiplePermits, peek());
-                }
-                permitted = true;
-                do
-                {
-                    const Token& token = peek();
-                    TypeNode type = parseTypeNode();
-                    if (!jcutils::canPermit(type))
-                    {
-                        throw parser_exception(ParserExceptionType::CannotPermitsTo, token);
-                    }
-                    decl.permittedTypes.push_back(std::move(type));
-                } while (matchSymbol(SymbolType::Comma));
-                tryTime++;
-            }
-            else
-            {
-                throw parser_exception(ParserExceptionType::NeedBraceForClassDeclaration, peek());
-            }
+                decl.permittedTypes.push_back(std::move(type));
+            } while (matchSymbol(SymbolType::Comma));
         }
 
         expectSymbol(SymbolType::LBrace);
@@ -397,7 +365,7 @@ namespace javac
             {
                 AnnotationArg arg = parseAnnotationArg();
                 annotation.arguments.push_back(std::move(arg));
-            } while (matchSymbol(SymbolType::LBrace));
+            } while (matchSymbol(SymbolType::Comma));
 
             expectSymbol(SymbolType::RParen);
         }
@@ -482,7 +450,7 @@ namespace javac
 
     std::unique_ptr<Expr> Parser::parseBasicLiteral()
     {
-        const Token& token = peek();
+        const Token& token = advance();
         switch (token.tokenType)
         {
             case TokenType::IntegerLiteral:
@@ -512,11 +480,20 @@ namespace javac
             }
             case TokenType::FloatLiteral:
             {
-                jdouble number;
                 try
                 {
-                    number = jcutils::doubleFromString(token.content);
-                } catch (const std::invalid_argument& e)
+                    if (jcutils::is32Float(token.content))
+                    {
+                        FloatExpr floatExpr;
+                        floatExpr.value = jcutils::floatFromString(token.content);
+                        return std::make_unique<FloatExpr>(floatExpr);
+                    }
+
+                    DoubleExpr doubleExpr;
+                    doubleExpr.value = jcutils::doubleFromString(token.content);
+                    return std::make_unique<DoubleExpr>(doubleExpr);
+                }
+                catch (const std::invalid_argument& e)
                 {
                     throw parser_exception(ParserExceptionType::InvalidNumberLiteral, token, e.what());
                 }
@@ -524,27 +501,17 @@ namespace javac
                 {
                     throw parser_exception(ParserExceptionType::OutOfRangeNumberLiteral, token, e.what());
                 }
-
-                if (jcutils::is32Float(token.content))
-                {
-                    FloatExpr floatExpr;
-                    floatExpr.value = static_cast<jfloat>(number);
-                    return  std::make_unique<FloatExpr>(floatExpr);
-                }
-                DoubleExpr doubleExpr;
-                doubleExpr.value = number;
-                return  std::make_unique<DoubleExpr>(doubleExpr);
             }
             case TokenType::StringLiteral:
             {
                 StringExpr stringExpr;
-                stringExpr.value = expectIdentifier().content;
+                stringExpr.value = peek().content;
                 return  std::make_unique<StringExpr>(stringExpr);
             }
             case TokenType::CharacterLiteral:
             {
                 CharExpr charExpr;
-                charExpr.value = expectIdentifier().content.at(0);
+                charExpr.value = peek().content.at(0);
                 return  std::make_unique<CharExpr>(charExpr);
             }
             case TokenType::BooleanLiteral:
