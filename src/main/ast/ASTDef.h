@@ -84,13 +84,13 @@ namespace javac
         std::unique_ptr<TypeNode> type; // Exact argument or wildcard bound; null for unbounded ?.
     };
 
-    // One name segment: Outer<T> or Inner<U> in Outer<T>.Inner<U>.
+    // One name segment: Outer<T> or Inner<U> in Outer<T>.Inner<U>. Separate by dot '.'
     struct TypeNamePart : ASTNode
     {
         std::u16string name; // Declared or referenced name.
         std::vector<Annotation> annotations; // Annotations attached to this syntax element.
         std::vector<TypeArg> typeArguments; // Explicit type arguments at this use site.
-        bool diamond = false; // True for <>; typeArguments is empty in that form.
+        bool diamond = false; // if typeArguments is emtpy, it looks like this: "List<>"
     };
 
     // One [] in a type, including annotations on that dimension.

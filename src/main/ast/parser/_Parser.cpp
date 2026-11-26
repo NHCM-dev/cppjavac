@@ -74,10 +74,16 @@ namespace javac
         throw parser_exception(ParserExceptionType::ExpectSymbol, peek());
     }
 
+    bool Parser::checkKeyword() const
+    {
+        return peek().keyword.has_value();
+    }
+
     bool Parser::checkKeyword(const JavaKeyword& keyword) const
     {
-        return peek().keyword.has_value() && peek().keyword.value() == keyword;
+        return checkKeyword() && peek().keyword.value() == keyword;
     }
+
     bool Parser::matchKeyword(const JavaKeyword& keyword)
     {
         if (checkKeyword(keyword))
@@ -87,6 +93,7 @@ namespace javac
         }
         return false;
     }
+
     const Token& Parser::expectKeyword(const JavaKeyword& keyword)
     {
         if (checkKeyword(keyword))
@@ -101,6 +108,16 @@ namespace javac
         return peek().canBeIdentifier;
     }
 
+    bool Parser::matchIdentifier()
+    {
+        if (checkIdentifier())
+        {
+            advance();
+            return true;
+        }
+        return false;
+    }
+
     const Token& Parser::expectIdentifier()
     {
         if (checkIdentifier())
@@ -109,5 +126,4 @@ namespace javac
         }
         throw parser_exception(ParserExceptionType::ExpectIdentifier, peek());
     }
-
 }

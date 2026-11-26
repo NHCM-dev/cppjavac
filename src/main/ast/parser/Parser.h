@@ -10,6 +10,7 @@
 
 #include "main/ast/astdefs/Declarations.h"
 #include "main/ast/astdefs/Expressions.h"
+#include "main/core/def/Extension.h"
 #include "main/lexer/LexerDef.h"
 
 namespace javac
@@ -31,6 +32,8 @@ namespace javac
 
         InvalidNumberLiteral,
         OutOfRangeNumberLiteral,
+
+        KeywordInTypeSpecification,
     };
 
     class parser_exception : public std::logic_error
@@ -65,10 +68,11 @@ namespace javac
     {
         const Path filePath;
         TokenStream inputStream;
+        const std::set<JavacExtension> extensions;
+        const LangLevel sourceLangLevel;
 
         CompilationUnit compilationUnit = {};
 
-        void errorProcessPlaceholder();
 
         static CompilationUnitType decideType(const Path& filePath);
 
@@ -109,6 +113,9 @@ namespace javac
          */
         const Token& expectSymbol(SymbolType type);
 
+        // Return true if current token is a keyword
+        [[nodiscard]]
+        bool checkKeyword() const;
         // Return true if current token match the given keyword
         [[nodiscard]]
         bool checkKeyword(const JavaKeyword& keyword) const;
@@ -125,6 +132,8 @@ namespace javac
         // Return true if current token is an identifier
         [[nodiscard]]
         bool checkIdentifier() const;
+        // If current token is an identifier, return true and advance, otherwise return false
+        bool matchIdentifier();
         /**
           * If current token is an identifier, return the current token and advance, otherwise throw exception
           * @throw parser_exception if the current token is not an identifier
@@ -134,7 +143,22 @@ namespace javac
 
         // ======
 
+        /**
+         * Parse a TypeNode if you are sure that from this token it is going to be a type specification
+         * Will auto proces annotations at the front
+         * @return TypeNode parsed
+         */
         TypeNode parseTypeNode();
+
+        /**
+         * Parse a vector of ArrayDimension for type specification
+         * Annotations are automatically process, include the prefix one
+         * @return parsed ArrayDimensions or empty if nothing parsed
+         */
+        std::vector<ArrayDimension> parseArrayDimension();
+
+        // Parse TypeArg defined within <...>, Like "String" in "List<String>"
+        std::vector<TypeArg> parseTypeArgs();
 
         /**
          * Try parse a package declaration start from keyword "package"
@@ -146,6 +170,10 @@ namespace javac
         ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {});
         MethodDecl parseMethodDecl();
 
+        /**
+         * Try parse annotations, will consume an '@' symbol token
+         * @return a vector of parsed annotations or empty if nothing parsed
+         */
         std::vector<Annotation> parseAnnotations();
         Annotation parseAnnotation();
         AnnotationArg parseAnnotationArg();
@@ -177,7 +205,8 @@ namespace javac
          * @param inputStream Token streams which contains no invalid tokens
          * @param filePath path of source file
          */
-        Parser(TokenStream inputStream, Path filePath);
+        Parser(TokenStream inputStream, Path filePath,
+            std::set<JavacExtension> extensions = {}, LangLevel sourceLangLevel = LangLevel::Eight);
 
         CompilationUnit parse();
     };

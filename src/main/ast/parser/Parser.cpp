@@ -8,8 +8,9 @@
 
 namespace javac
 {
-    Parser::Parser(TokenStream inputStream, Path filePath)
-       : inputStream(std::move(inputStream)), filePath(std::move(filePath))
+    Parser::Parser(TokenStream inputStream, Path filePath, std::set<JavacExtension> extensions, LangLevel sourceLangLevel)
+    : inputStream(std::move(inputStream)), filePath(std::move(filePath)),
+    extensions(std::move(extensions)), sourceLangLevel(sourceLangLevel)
     {
         if (!this->inputStream.invalidTokens.empty())
         {
@@ -75,24 +76,127 @@ namespace javac
         }
     }
 
-    TypeNode Parser::parseTypeNode()
-    {
-        throw std::logic_error("Type parsing is not implemented");
-    }
-
-    std::vector<Annotation> Parser::parseAnnotations()
-    {
-        std::vector<Annotation> annotations;
-        while (checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE)
-        {
-            annotations.push_back(parseAnnotation());
-        }
-        return annotations;
-    }
-
     void Parser::parseModular()
     {
 
+    }
+
+    TypeNode Parser::parseTypeNode()
+    {
+        TypeNode node;
+        const auto finishType = [this, &node]() -> TypeNode
+        {
+            std::vector<ArrayDimension> dimensions = parseArrayDimension();
+            if (dimensions.empty())
+            {
+                return std::move(node);
+            }
+
+            TypeNode array;
+            array.objectType = ObjectType::Array;
+            array.elementType = std::make_unique<TypeNode>(std::move(node));
+            array.dimensions = std::move(dimensions);
+            return array;
+        };
+
+        const auto settlePrimitive = [&node, &finishType](PrimitiveType type)
+        {
+            node.objectType = ObjectType::Primitive;
+            node.primitiveType = type;
+            return finishType();
+        };
+
+        node.annotations = parseAnnotations();
+
+        if (matchKeyword(VOID))
+        {
+            node.objectType = ObjectType::Void;
+            return node;
+        }
+        if (matchKeyword(BOOLEAN))
+        {
+            return settlePrimitive(PrimitiveType::Boolean);
+        }
+        if (matchKeyword(BYTE))
+        {
+            return settlePrimitive(PrimitiveType::Byte);
+        }
+        if (matchKeyword(SHORT))
+        {
+            return settlePrimitive(PrimitiveType::Short);
+        }
+        if (matchKeyword(CHAR))
+        {
+            return settlePrimitive(PrimitiveType::Char);
+        }
+        if (matchKeyword(INT))
+        {
+            return settlePrimitive(PrimitiveType::Int);
+        }
+        if (matchKeyword(LONG))
+        {
+            return settlePrimitive(PrimitiveType::Long);
+        }
+        if (matchKeyword(FLOAT))
+        {
+            return settlePrimitive(PrimitiveType::Float);
+        }
+        if (matchKeyword(DOUBLE))
+        {
+            return settlePrimitive(PrimitiveType::Double);
+        }
+
+        if (checkKeyword() && !peek().canBeIdentifier)
+        {
+            throw parser_exception(ParserExceptionType::KeywordInTypeSpecification, peek());
+        }
+
+        std::vector<Annotation> annotations = std::move(node.annotations);
+        do
+        {
+            TypeNamePart namePart;
+            namePart.annotations = std::move(annotations);
+            namePart.name = expectIdentifier().content;
+
+            if (matchSymbol(SymbolType::LAngleBracket))
+            {
+                node.objectType = ObjectType::GenericClass;
+                namePart.diamond = checkSymbol(SymbolType::RAngleBracket);
+                if (!namePart.diamond)
+                {
+                    namePart.typeArguments = parseTypeArgs();
+                }
+                expectSymbol(SymbolType::RAngleBracket);
+            }
+
+            node.nameParts.push_back(std::move(namePart));
+            if (!matchSymbol(SymbolType::Dot))
+            {
+                break;
+            }
+            annotations = parseAnnotations();
+        } while (true);
+
+        return finishType();
+    }
+
+    std::vector<ArrayDimension> Parser::parseArrayDimension()
+    {
+        std::vector<ArrayDimension> dimensions;
+        while (checkSymbol(SymbolType::LBracket) || checkSymbol(SymbolType::AtSign))
+        {
+            ArrayDimension dimension;
+            dimension.annotations = parseAnnotations();
+            expectSymbol(SymbolType::LBracket);
+            expectSymbol(SymbolType::RBracket);
+            dimensions.push_back(std::move(dimension));
+        }
+        return dimensions;
+    }
+
+    std::vector<TypeArg> Parser::parseTypeArgs()
+    {
+        //TODO: Implement
     }
 
     PackageDecl Parser::parsePackageDecl(std::vector<Annotation> annotations)
@@ -193,6 +297,15 @@ namespace javac
 
     }
 
+    std::vector<Annotation> Parser::parseAnnotations()
+    {
+        std::vector<Annotation> annotations;
+        while (checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE)
+        {
+            annotations.push_back(parseAnnotation());
+        }
+        return annotations;
+    }
 
     Annotation Parser::parseAnnotation()
     {
