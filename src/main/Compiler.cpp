@@ -144,7 +144,7 @@ namespace javac
         {
             const auto message = invalidTokenStr(token->invalidReason.value());
             jcutils::printDiagnostic(jcutils::DiagnosticSeverity::Error, file, message,
-                jcutils::DiagnosticSite{token->location}, source);
+                token->range, source);
             compileRtData->errors.emplace_back(message);
         }
         return !tokens.invalidTokens.empty();
@@ -220,8 +220,7 @@ namespace javac
                                 }
                         }
                     }
-                    const std::string position = std::to_string(token.location.line) + ':'
-                        + std::to_string(token.location.column);
+                    const std::string position = sourceLocationToString(token.range.begin);
                     std::string output = position + ' ';
                     output += typeNames[static_cast<std::size_t>(token.tokenType)];
                     output += " \"" + content + '"';

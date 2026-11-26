@@ -29,7 +29,6 @@ namespace javac
         std::size_t offset = 0;
         std::size_t line = 1;
         std::size_t column = 0;
-        SourceLocation tokenStart;
 
         bool needEndString = false;
         bool needEndChar = false;
@@ -42,12 +41,6 @@ namespace javac
         bool keywordIdentifiers;
         bool numericStart;
         LangLevel sourceLangLevel;
-
-        void pushToken(TokenType type,
-            std::optional<SymbolType> symbol = std::nullopt,
-            std::optional<JavaKeyword> keyword = std::nullopt,
-            std::optional<InvalidTokenType> invalidReason = std::nullopt,
-            bool canBeIdentifier = false);
 
     public:
         Lexer(std::u16string_view sourceCode, std::set<JavacExtension> extensions = {},

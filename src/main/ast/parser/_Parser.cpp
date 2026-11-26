@@ -4,6 +4,8 @@
 
 #include "Parser.h"
 
+#include <algorithm>
+
 namespace javac
 {
     void Parser::errorProcessPlaceholder()
@@ -95,7 +97,17 @@ namespace javac
                 auto remainder = token;
                 remainder.content.erase(0, 1);
                 remainder.symbol = symbol;
-                ++remainder.location.column;
+                auto& begin = remainder.range.begin;
+                ++begin.column;
+                const auto& offsets = inputStream.sourceOffsets;
+                if (offsets.empty())
+                {
+                    ++begin.offsetInFile;
+                }
+                else
+                {
+                    begin.offsetInFile = *std::upper_bound(offsets.begin(), offsets.end(), begin.offsetInFile);
+                }
                 typeCloseRemainder.emplace(tokenPointer, std::move(remainder));
                 return;
             }

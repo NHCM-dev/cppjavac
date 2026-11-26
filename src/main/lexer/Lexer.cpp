@@ -61,14 +61,6 @@ namespace javac
         numericStart = this->extensions.contains(JavacExtension::AllowNumericStartIdentifiers);
     }
 
-    void Lexer::pushToken(TokenType type, std::optional<SymbolType> symbol,
-        std::optional<JavaKeyword> keyword, std::optional<InvalidTokenType> invalidReason,
-        bool canBeIdentifier)
-    {
-        tokens.emplace_back(type, tokenBuffer, tokenStart, symbol, keyword, invalidReason, canBeIdentifier);
-        tokenBuffer.clear();
-    }
-
     TokenStream Lexer::lex(bool spaceAndLine, bool comment)
     {
         tokens.clear();
@@ -98,6 +90,21 @@ namespace javac
             source.remove_suffix(1);
         }
         const std::size_t sourceSize = source.size();
+
+        const auto originalOffset = [&](std::size_t index) {
+            if (sourceOffsets.empty())
+            {
+                return index;
+            }
+            return index < sourceOffsets.size() ? sourceOffsets[index] : sourceCode.size();
+        };
+        SourceRange tokenRange;
+        const auto pushToken = [&](TokenType type, std::optional<SymbolType> symbol = std::nullopt,
+            std::optional<JavaKeyword> keyword = std::nullopt,
+            std::optional<InvalidTokenType> invalidReason = std::nullopt, bool canBeIdentifier = false) {
+            tokens.emplace_back(type, tokenBuffer, tokenRange, symbol, keyword, invalidReason, canBeIdentifier);
+            tokenBuffer.clear();
+        };
 
         const auto isDecimalDigit = [](char16_t ch) { return ch >= u'0' && ch <= u'9'; };
         const auto isHexDigit = [&](char16_t ch) {
@@ -151,16 +158,18 @@ namespace javac
 
             if (tokenBuffer.empty())
             {
-                tokenStart = {sourceOffsets.empty() ? offset : sourceOffsets[offset], line, column + 1};
+                tokenRange.begin = {originalOffset(offset), line, column + 1};
             }
             tokenBuffer += currentChar;
             ++column;
+            tokenRange.end = {originalOffset(offset + 1), line, column + 1};
 
             // The first code unit is already in tokenBuffer.
             const auto appendRest = [&](std::size_t length) {
                 tokenBuffer.append(source.substr(offset + 1, length - 1));
                 offset += length - 1;
                 column += length - 1;
+                tokenRange.end = {originalOffset(offset + 1), line, column + 1};
             };
 
             if (newLine)
@@ -169,6 +178,9 @@ namespace javac
                 {
                     appendRest(2);
                 }
+                ++line;
+                column = 0;
+                tokenRange.end = {originalOffset(offset + 1), line, 1};
                 if (!needEndComment)
                 {
                     if (spaceAndLine)
@@ -180,8 +192,6 @@ namespace javac
                         tokenBuffer.clear();
                     }
                 }
-                ++line;
-                column = 0;
                 continue;
             }
 
@@ -436,9 +446,10 @@ namespace javac
             }
         }
 
-        tokenStart = {sourceCode.size(), line, column + 1};
+        const SourceLocation eof{sourceCode.size(), line, column + 1};
+        tokenRange = {eof, eof};
         pushToken(TokenType::EndOfFile);
 
-        return {std::move(tokens), std::move(invalidTokens)};
+        return {std::move(tokens), std::move(invalidTokens), std::move(sourceOffsets)};
     }
 } // javac

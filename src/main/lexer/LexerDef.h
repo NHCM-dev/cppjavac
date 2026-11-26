@@ -158,7 +158,7 @@ namespace javac
     {
         TokenType tokenType;
         std::u16string content;
-        SourceLocation location;
+        SourceRange range;
 
         std::optional<SymbolType> symbol;
         std::optional<JavaKeyword> keyword;
@@ -170,6 +170,7 @@ namespace javac
     {
         std::vector<Token> tokens;
         std::vector<std::unique_ptr<Token>> invalidTokens;
+        std::vector<std::size_t> sourceOffsets; // Translated code-unit offsets mapped to original offsets.
     };
 
 } // javac

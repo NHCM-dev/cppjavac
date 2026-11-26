@@ -68,10 +68,10 @@ namespace jcutils
             return display;
         }
 
-        void printExcerpt(const DiagnosticSite& site, std::u16string_view source)
+        void printExcerpt(const SourceRange& site, std::u16string_view source)
         {
             const auto begin = site.begin;
-            auto end = site.end.value_or(begin);
+            auto end = site.end;
             if (end.line < begin.line || (end.line == begin.line && end.column < begin.column))
             {
                 end = begin;
@@ -115,17 +115,14 @@ namespace jcutils
         DiagnosticSeverity severity,
         std::optional<Path> path,
         std::string_view message,
-        std::optional<DiagnosticSite> site,
+        std::optional<SourceRange> site,
         std::optional<std::u16string_view> sourceFile,
         std::string_view owner)
     {
         if (site && sourceFile)
         {
             site->begin = locate(*sourceFile, site->begin.offsetInFile);
-            if (site->end)
-            {
-                site->end = locate(*sourceFile, site->end->offsetInFile);
-            }
+            site->end = locate(*sourceFile, site->end.offsetInFile);
         }
 
         const auto filePath = path ? path->string() : std::string{};
