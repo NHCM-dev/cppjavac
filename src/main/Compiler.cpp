@@ -308,6 +308,26 @@ namespace javac
 
     bool Compiler::postProcess()
     {
+        size_t errorCount = compileRtData->errors.size();
+        size_t warningCount = compileRtData->warnings.size();
+        std::string errorAndWarning;
+        if (errorCount != 0)
+        {
+            errorAndWarning += std::to_string(errorCount) + " error" + (errorCount > 0 ? "s" : "") + " generated";
+        }
+        if (warningCount != 0)
+        {
+            if (errorCount != 0)
+            {
+                errorAndWarning += " and ";
+            }
+            errorAndWarning += std::to_string(warningCount) + " warning" + (errorCount > 0 ? "s" : "") + " generated";
+        }
+        if (!errorAndWarning.empty())
+        {
+            jcutils::printWarningBy(errorAndWarning);
+        }
+
         bool error = false;
         for (const auto& path2Bytes : compileRtData->filesToWrite)
         {
