@@ -28,6 +28,7 @@ namespace javac
     {
         compilationUnit = {};
         tokenPointer = 0;
+        typeCloseRemainder.reset();
         CompilationUnitType compilationUnitType = decideType(this->filePath);
 
 
@@ -81,7 +82,7 @@ namespace javac
 
     }
 
-    TypeNode Parser::parseTypeNode()
+    TypeNode Parser::parseTypeNode(std::vector<Annotation> leadingAnnotations)
     {
         TypeNode node;
         const auto finishType = [this, &node]() -> TypeNode
@@ -106,7 +107,7 @@ namespace javac
             return finishType();
         };
 
-        node.annotations = parseAnnotations();
+        node.annotations = leadingAnnotations.empty() ? parseAnnotations() : std::move(leadingAnnotations);
 
         if (matchKeyword(VOID))
         {
@@ -166,7 +167,7 @@ namespace javac
                 {
                     namePart.typeArguments = parseTypeArgs();
                 }
-                expectSymbol(SymbolType::RAngleBracket);
+                expectTypeClose();
             }
 
             node.nameParts.push_back(std::move(namePart));
@@ -196,7 +197,38 @@ namespace javac
 
     std::vector<TypeArg> Parser::parseTypeArgs()
     {
-        //TODO: Implement
+        std::vector<TypeArg> typeArgs = {};
+        do
+        {
+            TypeArg arg;
+            std::vector<Annotation> pendingAnnotations = parseAnnotations();
+            if (matchSymbol(SymbolType::Question))
+            {
+                arg.annotations = std::move(pendingAnnotations);
+                if (matchKeyword(EXTENDS))
+                {
+                    arg.genericType = GenericType::Extends;
+                    arg.type = std::make_unique<TypeNode>(parseTypeNode());
+                    typeArgs.push_back(std::move(arg));
+                    continue;
+                }
+                if (matchKeyword(SUPER))
+                {
+                    arg.genericType = GenericType::Super;
+                    arg.type = std::make_unique<TypeNode>(parseTypeNode());
+                    typeArgs.push_back(std::move(arg));
+                    continue;
+                }
+                arg.genericType = GenericType::Unbounded;
+                typeArgs.push_back(std::move(arg));
+                continue;
+            }
+            arg.genericType = GenericType::Exact;
+            arg.type = std::make_unique<TypeNode>(parseTypeNode(std::move(pendingAnnotations)));
+
+            typeArgs.push_back(std::move(arg));
+        } while (matchSymbol(SymbolType::Comma));
+        return typeArgs;
     }
 
     PackageDecl Parser::parsePackageDecl(std::vector<Annotation> annotations)
@@ -403,7 +435,7 @@ namespace javac
         }
         while (matchSymbol(SymbolType::Comma));
 
-        expectSymbol(SymbolType::RAngleBracket);
+        expectTypeClose();
         return parameters;
     }
 

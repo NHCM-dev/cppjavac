@@ -12,55 +12,10 @@
 #include "main/ast/astdefs/Expressions.h"
 #include "main/core/def/Extension.h"
 #include "main/lexer/LexerDef.h"
+#include "ParserException.h"
 
 namespace javac
 {
-    enum class ParserExceptionType : uint8_t
-    {
-        ExpectSymbol,
-        ExpectKeyword,
-        ExpectIdentifier,
-        ExpectClassLiteral,
-
-        MultipleExtends,
-        MultipleImplements,
-        MultiplePermits,
-
-        NeedBraceForClassDeclaration,
-
-        NotLiteral,
-
-        InvalidNumberLiteral,
-        OutOfRangeNumberLiteral,
-
-        KeywordInTypeSpecification,
-    };
-
-    class parser_exception : public std::logic_error
-    {
-    public:
-        const ParserExceptionType exception;
-        const std::optional<Token> actualToken = std::nullopt;
-
-        parser_exception(ParserExceptionType exception)
-            : logic_error({}), exception(exception)
-        {
-
-        }
-
-        parser_exception(ParserExceptionType exception, Token actualToken)
-            : logic_error({}), exception(exception), actualToken(actualToken)
-        {
-
-        }
-
-        parser_exception(ParserExceptionType exception, Token actualToken, const std::string& cause)
-            : logic_error(cause), exception(exception), actualToken(actualToken)
-        {
-
-        }
-    };
-
     /**
      * Class that parse a valid stream of tokens and generate AST tree
      */
@@ -78,6 +33,7 @@ namespace javac
 
         // index which point to current unread-unconsumed token
         size_t tokenPointer = 0;
+        std::optional<std::pair<std::size_t, Token>> typeCloseRemainder;
 
         // === basic tools ===
 
@@ -112,6 +68,14 @@ namespace javac
          * @return expected token
          */
         const Token& expectSymbol(SymbolType type);
+        /**
+         * Consume one closing angle bracket in a generic type.
+         * If the current token starts with '>' and contains more characters,
+         * leave the remaining symbol at the cursor.
+         * @throw parser_exception if the current token cannot provide a closing angle bracket
+         */
+        void expectTypeClose();
+        void errorProcessPlaceholder();
 
         // Return true if current token is a keyword
         [[nodiscard]]
@@ -148,7 +112,7 @@ namespace javac
          * Will auto proces annotations at the front
          * @return TypeNode parsed
          */
-        TypeNode parseTypeNode();
+        TypeNode parseTypeNode(std::vector<Annotation> annotations = {});
 
         /**
          * Parse a vector of ArrayDimension for type specification
@@ -158,7 +122,10 @@ namespace javac
         std::vector<ArrayDimension> parseArrayDimension();
 
         // Parse TypeArg defined within <...>, Like "String" in "List<String>"
+        // It must be specific type or unbound, not for class generic parameter declaration
+        // By invoking this method, a Left angle bracket should be consumed, and this method won't consume the Right angle bracket
         std::vector<TypeArg> parseTypeArgs();
+        
 
         /**
          * Try parse a package declaration start from keyword "package"

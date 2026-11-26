@@ -28,6 +28,10 @@ namespace javac
 
     const Token& Parser::peek(std::size_t offset) const
     {
+        if (offset == 0 && typeCloseRemainder && typeCloseRemainder->first == tokenPointer)
+        {
+            return typeCloseRemainder->second;
+        }
         if (tokenPointer + offset >= tokens().size())
         {
             offset = 0;
@@ -40,7 +44,9 @@ namespace javac
         {
             return tokens().back();
         }
-        return tokens().at(tokenPointer++);
+        const auto& token = peek();
+        ++tokenPointer;
+        return token;
     }
     bool Parser::isAtEnd() const
     {
@@ -72,6 +78,30 @@ namespace javac
             return advance();
         }
         throw parser_exception(ParserExceptionType::ExpectSymbol, peek());
+    }
+
+    void Parser::expectTypeClose()
+    {
+        if (matchSymbol(SymbolType::RAngleBracket))
+        {
+            return;
+        }
+
+        const auto& token = peek();
+        if (token.symbol && token.content.size() > 1 && token.content.front() == u'>')
+        {
+            if (const auto symbol = findSymbol(std::u16string_view(token.content).substr(1)))
+            {
+                auto remainder = token;
+                remainder.content.erase(0, 1);
+                remainder.symbol = symbol;
+                ++remainder.location.column;
+                typeCloseRemainder.emplace(tokenPointer, std::move(remainder));
+                return;
+            }
+        }
+
+        throw parser_exception(ParserExceptionType::ExpectSymbol, token, "Expected '>'");
     }
 
     bool Parser::checkKeyword() const
