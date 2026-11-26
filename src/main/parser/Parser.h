@@ -41,7 +41,11 @@ namespace javac
         const std::vector<Token>& tokens() const;
 
         // Return if an extension is enabled
+        [[nodiscard]]
         bool extensionEnabled(JavacExtension extension) const;
+
+        [[nodiscard]]
+        bool canBeAnnotation() const;
 
         /**
          * Read token at X offset
@@ -141,6 +145,9 @@ namespace javac
          */
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
         ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {});
+
+        std::vector<ModifierFlag> parseModifierFlags();
+
         FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers = {});
 
 

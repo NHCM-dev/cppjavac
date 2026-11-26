@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <map>
+#include <utility>
 
 namespace javac
 {
@@ -15,6 +16,56 @@ namespace javac
         if (level == static_cast<int>(LangLevel::Eight))
         {
             return LangLevel::Eight;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<PrimitiveType> primitiveTypeFromKeyword(const JavaKeyword& keyword)
+    {
+        static constexpr std::pair<JavaKeyword, PrimitiveType> types[] = {
+            {BOOLEAN, PrimitiveType::Boolean},
+            {BYTE, PrimitiveType::Byte},
+            {SHORT, PrimitiveType::Short},
+            {CHAR, PrimitiveType::Char},
+            {INT, PrimitiveType::Int},
+            {LONG, PrimitiveType::Long},
+            {FLOAT, PrimitiveType::Float},
+            {DOUBLE, PrimitiveType::Double},
+        };
+        for (const auto& [candidate, type] : types)
+        {
+            if (keyword == candidate)
+            {
+                return type;
+            }
+        }
+        return std::nullopt;
+    }
+
+    std::optional<FlagType> flagTypeFromKeyword(const JavaKeyword& keyword)
+    {
+        static constexpr std::pair<JavaKeyword, FlagType> flags[] = {
+            {PUBLIC, FlagType::Public},
+            {PROTECTED, FlagType::Protected},
+            {PRIVATE, FlagType::Private},
+            {ABSTRACT, FlagType::Abstract},
+            {STATIC, FlagType::Static},
+            {FINAL, FlagType::Final},
+            {TRANSIENT, FlagType::Transient},
+            {VOLATILE, FlagType::Volatile},
+            {SYNCHRONIZED, FlagType::Synchronized},
+            {NATIVE, FlagType::Native},
+            {STRICTFP, FlagType::Strictfp},
+            {DEFAULT, FlagType::Default},
+            {SEALED, FlagType::Sealed},
+            {NON_SEALED, FlagType::NonSealed},
+        };
+        for (const auto& [candidate, flag] : flags)
+        {
+            if (keyword == candidate)
+            {
+                return flag;
+            }
         }
         return std::nullopt;
     }

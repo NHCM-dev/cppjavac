@@ -35,6 +35,11 @@ namespace javac
         return jcutils::contains(extensions, extension);
     }
 
+    bool Parser::canBeAnnotation() const
+    {
+        return checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE;
+    }
+
     const Token& Parser::peek(std::size_t offset) const
     {
         if (offset == 0 && typeCloseRemainder && typeCloseRemainder->first == tokenPointer)

@@ -118,42 +118,18 @@ namespace javac
             node.objectType = ObjectType::Void;
             return node;
         }
-        if (matchKeyword(BOOLEAN))
-        {
-            return settlePrimitive(PrimitiveType::Boolean);
-        }
-        if (matchKeyword(BYTE))
-        {
-            return settlePrimitive(PrimitiveType::Byte);
-        }
-        if (matchKeyword(SHORT))
-        {
-            return settlePrimitive(PrimitiveType::Short);
-        }
-        if (matchKeyword(CHAR))
-        {
-            return settlePrimitive(PrimitiveType::Char);
-        }
-        if (matchKeyword(INT))
-        {
-            return settlePrimitive(PrimitiveType::Int);
-        }
-        if (matchKeyword(LONG))
-        {
-            return settlePrimitive(PrimitiveType::Long);
-        }
-        if (matchKeyword(FLOAT))
-        {
-            return settlePrimitive(PrimitiveType::Float);
-        }
-        if (matchKeyword(DOUBLE))
-        {
-            return settlePrimitive(PrimitiveType::Double);
-        }
 
-        if (checkKeyword() && !peek().canBeIdentifier)
+        if (checkKeyword())
         {
-            throw parser_exception(ParserExceptionType::KeywordInTypeSpecification, peek());
+            std::optional<PrimitiveType> primitive = primitiveTypeFromKeyword(peek(1).keyword.value());
+            if (primitive)
+            {
+                return settlePrimitive(primitive.value());
+            }
+            if (!peek().canBeIdentifier)
+            {
+                throw parser_exception(ParserExceptionType::KeywordInTypeSpecification, peek());
+            }
         }
 
         std::vector<Annotation> annotations = std::move(node.annotations);
@@ -338,6 +314,56 @@ namespace javac
         return decl;
     }
 
+    std::vector<ModifierFlag> Parser::parseModifierFlags()
+    {
+        std::vector<ModifierFlag> vectors;
+
+        bool at = canBeAnnotation();
+        bool modifier = false;
+        FlagType flagType;
+        if (checkKeyword())
+        {
+            std::optional<FlagType> flag = flagTypeFromKeyword(peek().keyword.value());
+            if (flag)
+            {
+                modifier = true;
+                flagType = flag.value();
+            }
+        }
+        while (at || modifier)
+        {
+            if (at)
+            {
+                std::vector<Annotation> annotations = parseAnnotations();
+                for (Annotation& annotation : annotations)
+                {
+                    ModifierFlag flag;
+                    flag.annotation = std::move(annotation);
+                    vectors.push_back(std::move(flag));
+                }
+            } else
+            {
+                ModifierFlag flag;
+                flag.flagType = flagType;
+                vectors.push_back(std::move(flag));
+                advance();
+            }
+            at = canBeAnnotation();
+            modifier = false;
+            if (checkKeyword())
+            {
+                std::optional<FlagType> flag = flagTypeFromKeyword(peek().keyword.value());
+                if (flag)
+                {
+                    modifier = true;
+                    flagType = flag.value();
+                }
+            }
+        }
+
+        return vectors;
+    }
+
     FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers)
     {
         FieldDecl fieldDecl;
@@ -349,7 +375,7 @@ namespace javac
 
         if (fieldDecl.type.objectType == ObjectType::Void)
         {
-            throw parser_exception(ParserExceptionType::VoidAsFieldType, token);
+            throw parser_exception(ParserExceptionType::VoidAsTypeSpecification, token);
         }
 
         do
@@ -444,7 +470,7 @@ namespace javac
         {
             auto parameter = std::make_unique<ParameterDecl>();
             bool seenFinal = false;
-            while (checkKeyword(FINAL) || (checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE))
+            while (checkKeyword(FINAL) || canBeAnnotation())
             {
                 for (auto& annotation : parseAnnotations())
                 {
@@ -471,7 +497,7 @@ namespace javac
             parameter->type = parseTypeNode({}, &parameter->varargs);
             if (parameter->type->objectType == ObjectType::Void)
             {
-                throw parser_exception(ParserExceptionType::VoidInParameterTypeSpecification,typeStart);
+                throw parser_exception(ParserExceptionType::VoidAsTypeSpecification,typeStart);
             }
             parameter->name = expectIdentifier().content;
             if (!parameter->varargs)
@@ -510,7 +536,7 @@ namespace javac
     std::vector<Annotation> Parser::parseAnnotations()
     {
         std::vector<Annotation> annotations;
-        while (checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE)
+        while (canBeAnnotation())
         {
             annotations.push_back(parseAnnotation());
         }

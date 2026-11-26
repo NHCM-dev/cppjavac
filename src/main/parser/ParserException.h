@@ -31,7 +31,8 @@ namespace javac
 
         KeywordInTypeSpecification,
 
-        VoidInParameterTypeSpecification,
+        VoidAsTypeSpecification,
+
         KeywordInParameterTypeSpecification,
         DuplicateFinalInParameterTypeSpecification,
 
@@ -49,8 +50,6 @@ namespace javac
         KeywordInClassLiteral,
         InvalidThrowsType,
         UnsupportedParameterDefault,
-
-        VoidAsFieldType,
     };
 
     class parser_exception : public std::logic_error

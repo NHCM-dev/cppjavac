@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -48,7 +49,8 @@ namespace javac
         TwentyFive = 25
     };
 
-    [[nodiscard]] std::optional<LangLevel> parseLangLevel(int level);
+    [[nodiscard]]
+    std::optional<LangLevel> parseLangLevel(int level);
 
     enum class PrimitiveType : std::uint8_t
     {
@@ -221,6 +223,9 @@ namespace javac
 
     // Java 21
     inline constexpr JavaKeyword WHEN{"when", LangLevel::TwentyOne, JavaKeywordKind::Contextual};
+
+    [[nodiscard]] std::optional<PrimitiveType> primitiveTypeFromKeyword(const JavaKeyword& keyword);
+    [[nodiscard]] std::optional<FlagType> flagTypeFromKeyword(const JavaKeyword& keyword);
 
     // Looks up keywords and fixed literal spellings. The caller checks
     // the language level and decides whether a contextual word is a keyword in its current context.
