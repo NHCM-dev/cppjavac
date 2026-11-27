@@ -171,6 +171,11 @@ namespace javac
                 }
             }
         }
+        if (compileRtData->filesToCompile.empty())
+        {
+            jcutils::printErrorBy("Missing files");
+            return false;
+        }
         if (hasError)
         {
             return false;

@@ -10,6 +10,10 @@ namespace javac
 {
     void Compiler::printTerminate()
     {
+        if (compileRtData->errors.empty() && compileRtData->warnings.empty())
+        {
+            return;
+        }
         jcutils::printErrorCustom("Compiler terminated. " +
                 std::to_string(compileRtData->errors.size()) + " errors occurred, " +
                 std::to_string(compileRtData->warnings.size()) + " warnings generated.");
