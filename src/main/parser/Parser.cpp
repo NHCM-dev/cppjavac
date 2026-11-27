@@ -778,31 +778,45 @@ namespace javac
 
         while (!isAtEnd() && !checkSymbol(SymbolType::RBrace))
         {
-            blockStatement.statements.push_back(parseStatement());
+            blockStatement.statements.push_back(parseStatement(true));
         }
 
         blockStatement.range->end = expectSymbol(SymbolType::RBrace).range.end;
         return blockStatement;
     }
 
-    Uptr<Statement> Parser::parseStatement()
+    Uptr<Statement> Parser::parseStatement(bool allowBlock)
     {
-        if (checkSymbol(SymbolType::LBrace))
+        if (allowBlock && checkSymbol(SymbolType::LBrace))
         {
             return makeUniq<BlockStatement>(parseBlock());
         }
 
-        const Token& start = peek();
-        if (matchKeyword(RETURN))
+        if (checkSymbol(SymbolType::Semicolon))
         {
-            ReturnStatement statement;
-            statement.range = start.range;
-            if (!checkSymbol(SymbolType::Semicolon))
-            {
-                statement.value = parseValue();
-            }
-            statement.range->end = expectSymbol(SymbolType::Semicolon).range.end;
-            return makeUniq<ReturnStatement>(std::move(statement));
+            auto statement = makeUniq<EmptyStatement>();
+            statement->range = advance().range;
+            return statement;
+        }
+        if (checkKeyword(THROW))
+        {
+            return parseThrowStatement();
+        }
+        if (checkKeyword(RETURN))
+        {
+            return parseReturnStatement();
+        }
+        if (checkKeyword(IF))
+        {
+            return parseIfStatement();
+        }
+        if (checkKeyword(SWITCH))
+        {
+            return parseSwitchStatement();
+        }
+        if (checkKeyword(BREAK))
+        {
+            return parseBreakStatement();
         }
 
         std::vector<Annotation> pendingAnnotations = {};
@@ -812,6 +826,188 @@ namespace javac
         }
 
         //TODO: Implement rest of the statement parsing
+        throw parser_exception(ParserExceptionType::UnsupportedStatement, peek());
+    }
+
+    Uptr<ReturnStatement> Parser::parseReturnStatement()
+    {
+        Uptr<ReturnStatement> statement = makeUniq<ReturnStatement>();
+
+        statement->range = expectKeyword(RETURN).range;
+
+        if (!checkSymbol(SymbolType::Semicolon))
+        {
+            statement->value = parseValue();
+        }
+
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
+    }
+
+    Uptr<IfStatement> Parser::parseIfStatement()
+    {
+        Uptr<IfStatement> statement = makeUniq<IfStatement>();
+
+        statement->range = expectKeyword(IF).range;
+
+        expectSymbol(SymbolType::LParen);
+        statement->condition = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        statement->thenBranch = parseStatement();
+        if (matchKeyword(ELSE))
+        {
+            statement->elseBranch = parseStatement();
+        }
+
+        const Uptr<Statement>& lastBranch = statement->elseBranch
+            ? statement->elseBranch
+            : statement->thenBranch;
+        statement->range->end = lastBranch->range->end;
+        return statement;
+    }
+
+    Uptr<SwitchStatement> Parser::parseSwitchStatement()
+    {
+        Uptr<SwitchStatement> statement = makeUniq<SwitchStatement>();
+
+        statement->range = expectKeyword(SWITCH).range;
+
+        expectSymbol(SymbolType::LParen);
+        statement->selectorExpr = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        expectSymbol(SymbolType::LBrace);
+        const bool allowArrow = langLevelMeet(LangLevel::Fourteen);
+        const auto atLabel = [this]
+        {
+            return checkKeyword(CASE) || checkKeyword(DEFAULT);
+        };
+
+        std::optional<SymbolType> switchSeparator;
+        while (atLabel())
+        {
+            SwitchCase branch;
+            do
+            {
+                branch.labels.push_back(parseSwitchLabel());
+                const Token& separator = peek();
+                if (!checkSymbol(SymbolType::Colon) && !(allowArrow && checkSymbol(SymbolType::Arrow)))
+                {
+                    throw parser_exception(allowArrow ? ParserExceptionType::ExpectColonOrArrow
+                        : ParserExceptionType::ExpectColon, separator);
+                }
+                if (switchSeparator && switchSeparator != separator.symbol)
+                {
+                    throw parser_exception(ParserExceptionType::ArrowColonMixUseInSwitch, separator);
+                }
+
+                switchSeparator = separator.symbol;
+                advance();
+                if (!branch.range)
+                {
+                    branch.range = branch.labels.front().range;
+                }
+                branch.range->end = separator.range.end;
+            } while (switchSeparator == SymbolType::Colon && atLabel());
+
+            if (switchSeparator == SymbolType::Colon)
+            {
+                while (!isAtEnd() && !checkSymbol(SymbolType::RBrace) && !atLabel())
+                {
+                    auto child = parseStatement();
+                    branch.range->end = child->range->end;
+                    branch.statements.push_back(std::move(child));
+                }
+            }
+            else if (checkSymbol(SymbolType::LBrace))
+            {
+                branch.ruleStatement = makeUniq<BlockStatement>(parseBlock());
+                branch.range->end = branch.ruleStatement->range->end;
+            }
+            else if (checkKeyword(THROW))
+            {
+                branch.ruleStatement = parseThrowStatement();
+                branch.range->end = branch.ruleStatement->range->end;
+            }
+            else
+            {
+                branch.ruleExpr = parseValue();
+                branch.range->end = expectSymbol(SymbolType::Semicolon).range.end;
+            }
+            statement->cases.push_back(std::move(branch));
+        }
+
+        statement->range->end = expectSymbol(SymbolType::RBrace).range.end;
+        return statement;
+    }
+
+    SwitchLabel Parser::parseSwitchLabel()
+    {
+        SwitchLabel label;
+        if (checkKeyword(DEFAULT))
+        {
+            label.range = expectKeyword(DEFAULT).range;
+            label.hasDefault = true;
+            return label;
+        }
+
+        label.range = expectKeyword(CASE).range;
+        if (peek().tokenType == TokenType::NullLiteral)
+        {
+            if (!langLevelMeet(LangLevel::TwentyOne))
+            {
+                throw parser_exception(ParserExceptionType::InvalidSwitchLabel, peek());
+            }
+            label.caseExprs.push_back(parseConstantValue());
+            label.range->end = label.caseExprs.back()->range->end;
+            if (matchSymbol(SymbolType::Comma))
+            {
+                label.range->end = expectKeyword(DEFAULT).range.end;
+                label.hasDefault = true;
+            }
+            return label;
+        }
+
+        do
+        {
+            if (peek().tokenType == TokenType::NullLiteral)
+            {
+                throw parser_exception(ParserExceptionType::InvalidSwitchLabel, peek());
+            }
+            label.caseExprs.push_back(parseConstantValue());
+        } while (langLevelMeet(LangLevel::Fourteen) && matchSymbol(SymbolType::Comma));
+        label.range->end = label.caseExprs.back()->range->end;
+        return label;
+    }
+
+    Uptr<ThrowStatement> Parser::parseThrowStatement()
+    {
+        auto statement = makeUniq<ThrowStatement>();
+
+        statement->range = expectKeyword(THROW).range;
+        statement->value = parseValue();
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
+    }
+
+    Uptr<BreakStatement> Parser::parseBreakStatement()
+    {
+        Uptr<BreakStatement> statement = makeUniq<BreakStatement>();
+        statement->range = expectKeyword(BREAK).range;
+
+        if (checkIdentifier())
+        {
+            const Token& label = expectIdentifier();
+            statement->label = label.content;
+            statement->range->end = label.range.end;
+        }
+
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
     }
 
     std::vector<Annotation> Parser::parseAnnotations()
@@ -1136,9 +1332,15 @@ namespace javac
         return finishType();
     }
 
+    Uptr<Expr> Parser::parseConstantValue()
+    {
+        //TODO: implement
+        throw parser_exception(ParserExceptionType::UnsupportedExpression, peek());
+    }
+
     Uptr<Expr> Parser::parseValue()
     {
-        //TODO: IMPORTANT: parse a value as expression, include arithmetic expression,
-        // method calls, new XXX etc. Any value that has its own type
+        //TODO: implement
+        throw parser_exception(ParserExceptionType::UnsupportedExpression, peek());
     }
 } // javac

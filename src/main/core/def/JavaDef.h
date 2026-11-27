@@ -45,6 +45,7 @@ namespace javac
         Eight = 8,
         Nine = 9,
         Eleven = 11,
+        Fourteen = 14,
         Seventeen = 17,
         TwentyOne = 21,
         TwentyFive = 25

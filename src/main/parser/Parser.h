@@ -194,6 +194,7 @@ namespace javac
          */
         std::vector<Uptr<ParameterDecl>> parseMethodParameters();
 
+
         // Parse range of codes
         /**
          * Parse code block start with '{' and end with '}'
@@ -206,7 +207,13 @@ namespace javac
        * @throw parser_exception if the statement is invalid
        * @return parsed statement
        */
-        Uptr<Statement> parseStatement();
+        Uptr<Statement> parseStatement(bool allowBlock = true);
+        Uptr<ReturnStatement> parseReturnStatement();
+        Uptr<IfStatement> parseIfStatement();
+        Uptr<SwitchStatement> parseSwitchStatement();
+        SwitchLabel parseSwitchLabel();
+        Uptr<ThrowStatement> parseThrowStatement();
+        Uptr<BreakStatement> parseBreakStatement();
 
         // Annotation declaration
         /**
@@ -250,6 +257,17 @@ namespace javac
          */
         Uptr<ClassLiteralExpr> parseClassLiteral();
 
+        /**
+         * A value which can be confirmed during compile time
+         * Such as number, enum, static final value, Java17+: string, null.
+         * Does not include method call, annotation etc
+         * @return parsed expression
+         */
+        Uptr<Expr> parseConstantValue();
+        /**
+        * A value represented by expression, literally can be anything
+        * @return parsed expression
+        */
         Uptr<Expr> parseValue();
 
         void parseOrdinary();

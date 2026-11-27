@@ -22,6 +22,8 @@ namespace javac
         ExpectKeyword,
         ExpectIdentifier,
         ExpectClassLiteral,
+        ExpectColon,
+        ExpectColonOrArrow,
 
         MultipleExtends,
         MultipleImplements,
@@ -51,7 +53,6 @@ namespace javac
         CannotImplementsTo,
         CannotPermitsTo,
 
-
         GenericInClassLiteral,
 
         ModifierNotAllowedForClass,
@@ -77,16 +78,21 @@ namespace javac
         InvalidThrowsType,
         InvalidAnnotationElementType,
         InvalidClassMember,
+        InvalidSwitchLabel,
 
         UnsupportedParameterDefault,
         UnsupportedMemberTypeDeclaration,
         UnsupportedFieldInitializer,
+        UnsupportedStatement,
+        UnsupportedExpression,
+        UnsupportedElementExpression,
 
         InterfaceFieldRequiresInitializer,
         ConstructorNameMismatch,
 
         StaticInitializerInMemberClass,
-        UnsupportedElementExpression,
+
+        ArrowColonMixUseInSwitch,
     };
 
     class parser_exception : public std::logic_error
