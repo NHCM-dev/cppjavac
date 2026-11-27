@@ -143,6 +143,12 @@ namespace javac
          * @return the constructed package declaration
          */
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
+        /**
+         * Try parse an import declaration start from keyword "import"
+         * @throw parser_exception if any exception occurred during parsing
+         * @return the constructed import declaration
+         */
+        ImportDecl parseImportDecl();
 
         ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {},
             jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel);

@@ -63,6 +63,11 @@ namespace javac
             annotations = parseAnnotations();
         }
 
+        while (checkKeyword(IMPORT))
+        {
+            compilationUnit.importDecls.push_back(parseImportDecl());
+        }
+
         while (!isAtEnd() || !annotations.empty())
         {
             if (annotations.empty() && matchSymbol(SymbolType::Semicolon))

@@ -26,6 +26,59 @@ namespace javac
         return decl;
     }
 
+    ImportDecl Parser::parseImportDecl()
+    {
+        expectKeyword(IMPORT);
+
+        ImportDecl importDecl;
+
+        std::u16string importString;
+
+        if (matchKeyword(STATIC))
+        {
+            importDecl.importType = ImportType::Static;
+            importString += expectIdentifier().content;
+            while (matchSymbol(SymbolType::Dot))
+            {
+                importString += u'.';
+                if (matchSymbol(SymbolType::Star))
+                {
+                    importDecl.importType = ImportType::StaticOnDemand;
+                    break;
+                }
+                importString += expectIdentifier().content;
+            }
+            expectSymbol(SymbolType::Semicolon);
+            return importDecl;
+        }
+        if (langLevelMeet(LangLevel::TwentyFive) && matchKeyword(MODULE))
+        {
+            importDecl.importType = ImportType::Module;
+            importString += expectIdentifier().content;
+            while (matchSymbol(SymbolType::Dot))
+            {
+                importString += u'.';
+                importString += expectIdentifier().content;
+            }
+            expectSymbol(SymbolType::Semicolon);
+            return importDecl;
+        }
+        importDecl.importType = ImportType::Type;
+        importString += expectIdentifier().content;
+        while (matchSymbol(SymbolType::Dot))
+        {
+            importString += u'.';
+            if (matchSymbol(SymbolType::Star))
+            {
+                importDecl.importType = ImportType::TypeOnDemand;
+                break;
+            }
+            importString += expectIdentifier().content;
+        }
+        expectSymbol(SymbolType::Semicolon);
+        return importDecl;
+    }
+
     ClassDecl Parser::parseClassDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context)
     {
         expectKeyword(CLASS);
