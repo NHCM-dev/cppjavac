@@ -18,6 +18,8 @@ namespace javac
     {
         EXTENSION_VoidInGeneric,
 
+        GotoIsReserved,
+
         ExpectSymbol,
         ExpectKeyword,
         ExpectIdentifier,

@@ -814,9 +814,26 @@ namespace javac
         {
             return parseSwitchStatement();
         }
+        if (checkKeyword(CONTINUE))
+        {
+            return parseContinueStatement();
+        }
+        if (checkKeyword(GOTO))
+        {
+            return parseGotoStatement();
+        }
+        if (checkKeyword(ASSERT))
+        {
+            return parseAssertStatement();
+        }
         if (checkKeyword(BREAK))
         {
             return parseBreakStatement();
+        }
+
+        if (checkIdentifier() && peek(1).symbol == SymbolType::Colon)
+        {
+            return parseLabeledStatement();
         }
 
         std::vector<Annotation> pendingAnnotations = {};
@@ -988,6 +1005,75 @@ namespace javac
 
         statement->range = expectKeyword(THROW).range;
         statement->value = parseValue();
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
+    }
+
+    Uptr<LabeledStatement> Parser::parseLabeledStatement()
+    {
+        Uptr<LabeledStatement> statement = makeUniq<LabeledStatement>();
+
+        const Token& label = expectIdentifier();
+        statement->range = label.range;
+        statement->label = label.content;
+
+        expectSymbol(SymbolType::Colon);
+        statement->statement = parseStatement(true);
+        statement->range->end = statement->statement->range->end;
+
+        return statement;
+    }
+
+    Uptr<ContinueStatement> Parser::parseContinueStatement()
+    {
+        Uptr<ContinueStatement> statement = makeUniq<ContinueStatement>();
+        statement->range = expectKeyword(CONTINUE).range;
+
+        if (checkIdentifier())
+        {
+            const Token& label = expectIdentifier();
+            statement->label = label.content;
+            statement->range->end = label.range.end;
+        }
+
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
+    }
+
+    Uptr<GotoStatement> Parser::parseGotoStatement()
+    {
+        if (!extensionEnabled(JavacExtension::AllowGoto) && checkKeyword(GOTO))
+        {
+            throw parser_exception(ParserExceptionType::GotoIsReserved, peek());
+        }
+
+        Uptr<GotoStatement> statement = makeUniq<GotoStatement>();
+        statement->range = expectKeyword(GOTO).range;
+
+        const Token& label = expectIdentifier();
+        statement->label = label.content;
+        statement->range->end = label.range.end;
+
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
+    }
+
+    Uptr<AssertStatement> Parser::parseAssertStatement()
+    {
+        Uptr<AssertStatement> statement = makeUniq<AssertStatement>();
+
+        statement->range = expectKeyword(ASSERT).range;
+
+        statement->condition = parseValue();
+
+        if (matchSymbol(SymbolType::Colon))
+        {
+            statement->message = parseValue();
+        }
+
         statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
 
         return statement;

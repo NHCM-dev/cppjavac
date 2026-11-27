@@ -213,6 +213,12 @@ namespace javac
         Uptr<SwitchStatement> parseSwitchStatement();
         SwitchLabel parseSwitchLabel();
         Uptr<ThrowStatement> parseThrowStatement();
+
+        Uptr<LabeledStatement> parseLabeledStatement();
+        Uptr<ContinueStatement> parseContinueStatement();
+        // This one is for extension
+        Uptr<GotoStatement> parseGotoStatement();
+        Uptr<AssertStatement> parseAssertStatement();
         Uptr<BreakStatement> parseBreakStatement();
 
         // Annotation declaration
