@@ -4,6 +4,7 @@
 
 #include "Parser.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "ParserException.h"
@@ -75,6 +76,7 @@ namespace javac
             for (auto& annotation : annotations)
             {
                 ModifierFlag modifier;
+                modifier.range = annotation.range;
                 modifier.annotation = std::move(annotation);
                 modifiers.push_back(std::move(modifier));
             }
@@ -267,15 +269,13 @@ namespace javac
 
         ClassDecl classDecl;
 
-        if (!jcutils::modifiersAllowedForClass(modifiers, sourceLangLevel, context))
+        if (const auto* invalid = jcutils::findInvalidClassModifier(modifiers, sourceLangLevel, context))
         {
-            //TODO: site source for invalid modifiers
-            throw parser_exception(ParserExceptionType::ModifierNotAllowedForClass);
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForClass, invalid->range);
         }
         if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Class))
         {
-            //TODO: Attach the conflicting modifier token site.
-            throw parser_exception(*conflict);
+            throw parser_exception(conflict->exception, conflict->range);
         }
         classDecl.modifiers = std::move(modifiers);
         classDecl.name = expectIdentifier().content;
@@ -470,12 +470,14 @@ namespace javac
                 for (Annotation& annotation : annotations)
                 {
                     ModifierFlag flag;
+                    flag.range = annotation.range;
                     flag.annotation = std::move(annotation);
                     vectors.push_back(std::move(flag));
                 }
             } else
             {
                 ModifierFlag flag;
+                flag.range = peek().range;
                 flag.flagType = flagType;
                 vectors.push_back(std::move(flag));
                 advance();
@@ -500,15 +502,13 @@ namespace javac
         TypeNode type, const Token& firstName)
     {
         FieldDecl fieldDecl;
-        if (!jcutils::modifiersAllowedForField(modifiers, context))
+        if (const auto* invalid = jcutils::findInvalidFieldModifier(modifiers, context))
         {
-            //TODO: site source for invalid modifiers
-            throw parser_exception(ParserExceptionType::ModifierNotAllowedForField);
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForField, invalid->range);
         }
         if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Field))
         {
-            //TODO: Attach the conflicting modifier token site.
-            throw parser_exception(*conflict);
+            throw parser_exception(conflict->exception, conflict->range);
         }
         fieldDecl.modifiers = std::move(modifiers);
 
@@ -562,21 +562,19 @@ namespace javac
         std::optional<ReceiverParameter> receiverParameter)
     {
         MethodDecl methodDecl;
-        if (!jcutils::modifiersAllowedForMethod(modifiers, context, sourceLangLevel))
+        if (const auto* invalid = jcutils::findInvalidMethodModifier(modifiers, context, sourceLangLevel))
         {
-            //TODO: site source for invalid modifiers
-            throw parser_exception(ParserExceptionType::ModifierNotAllowedForMethod);
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForMethod, invalid->range);
         }
         if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Method))
         {
-            //TODO: Attach the conflicting modifier token site.
-            throw parser_exception(*conflict);
+            throw parser_exception(conflict->exception, conflict->range);
         }
-        const bool isAbstract = jcutils::haveModifier(modifiers, FlagType::Abstract);
+        const auto abstractModifier = std::ranges::find(modifiers, FlagType::Abstract, &ModifierFlag::flagType);
+        const bool isAbstract = abstractModifier != modifiers.end();
         if (isAbstract && context == jcutils::MethodDeclContext::Normal)
         {
-            //TODO: Attach the abstract modifier token site.
-            throw parser_exception(ParserExceptionType::AbstractMethodInNonAbstractClass);
+            throw parser_exception(ParserExceptionType::AbstractMethodInNonAbstractClass, abstractModifier->range);
         }
 
         const bool annotationElement = context == jcutils::MethodDeclContext::WithinAnnotation;
@@ -671,15 +669,13 @@ namespace javac
         }
 
         ConstructorDecl methodDecl;
-        if (!jcutils::modifiersAllowedForConstructor(modifiers, context))
+        if (const auto* invalid = jcutils::findInvalidConstructorModifier(modifiers))
         {
-            //TODO: site source for invalid modifiers
-            throw parser_exception(ParserExceptionType::ModifierNotAllowedForConstructor);
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForConstructor, invalid->range);
         }
         if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Constructor))
         {
-            //TODO: Attach the conflicting modifier token site.
-            throw parser_exception(*conflict);
+            throw parser_exception(conflict->exception, conflict->range);
         }
         methodDecl.modifiers = std::move(modifiers);
 
@@ -726,6 +722,7 @@ namespace javac
                 for (auto& annotation : parseAnnotations())
                 {
                     ModifierFlag modifier;
+                    modifier.range = annotation.range;
                     modifier.annotation = std::move(annotation);
                     parameter->modifiers.push_back(std::move(modifier));
                 }
@@ -736,9 +733,9 @@ namespace javac
                     {
                         throw parser_exception(ParserExceptionType::DuplicateFinalInParameterTypeSpecification,peek());
                     }
-                    advance();
                     seenFinal = true;
                     ModifierFlag modifier;
+                    modifier.range = advance().range;
                     modifier.flagType = FlagType::Final;
                     parameter->modifiers.push_back(std::move(modifier));
                 }
@@ -796,23 +793,22 @@ namespace javac
 
     Annotation Parser::parseAnnotation()
     {
-        expectSymbol(SymbolType::AtSign);
-
         Annotation annotation;
+        annotation.range = expectSymbol(SymbolType::AtSign).range;
 
-        annotation.name = expectIdentifier().content;
+        const auto& firstName = expectIdentifier();
+        annotation.name = firstName.content;
+        annotation.range->end = firstName.range.end;
         while (matchSymbol(SymbolType::Dot))
         {
+            const auto& part = expectIdentifier();
             annotation.name += u'.';
-            annotation.name += expectIdentifier().content;
+            annotation.name += part.content;
+            annotation.range->end = part.range.end;
         }
 
         if (matchSymbol(SymbolType::LParen))
         {
-            if (matchSymbol(SymbolType::RParen))
-            {
-                return annotation;
-            }
             if (checkIdentifier() && peek(1).symbol == SymbolType::Assign)
             {
                 do
@@ -820,15 +816,16 @@ namespace javac
                     annotation.arguments.push_back(parseAnnotationArg());
                 } while (matchSymbol(SymbolType::Comma));
             }
-            else
+            else if (!checkSymbol(SymbolType::RParen))
             {
                 AnnotationArg arg;
                 arg.value = parseElementValue();
                 annotation.arguments.push_back(std::move(arg));
             }
 
-            expectSymbol(SymbolType::RParen);
+            annotation.range->end = expectSymbol(SymbolType::RParen).range.end;
         }
+
         return annotation;
     }
 

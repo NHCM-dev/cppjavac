@@ -388,8 +388,7 @@ namespace javac
                     default: message = "Parsing error (code " + std::to_string(static_cast<unsigned>(error.exception)) + ')';
                 }
             }
-            const auto site = error.actualToken ? std::optional{error.actualToken->range} : std::nullopt;
-            jcutils::printDiagnostic(jcutils::DiagnosticSeverity::Error, file, message, site, source, PARSER);
+            jcutils::printDiagnostic(jcutils::DiagnosticSeverity::Error, file, message, error.range, source, PARSER);
             compileRtData->errors.push_back(std::move(message));
         }
         return !parserResult.exceptions.empty();

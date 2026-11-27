@@ -75,16 +75,15 @@ namespace jcutils
         WithinAnnotation
     };
 
-    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers,
+    const javac::ModifierFlag* findInvalidClassModifier(const std::vector<javac::ModifierFlag>& modifiers,
         javac::LangLevel langLevel = javac::LangLevel::Eight,
         ClassDeclContext context = ClassDeclContext::TopLevel);
-    bool modifiersAllowedForField(const std::vector<javac::ModifierFlag>& modifiers,
+    const javac::ModifierFlag* findInvalidFieldModifier(const std::vector<javac::ModifierFlag>& modifiers,
         ClassDeclContext context = ClassDeclContext::TopLevel);
-    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers,
+    const javac::ModifierFlag* findInvalidMethodModifier(const std::vector<javac::ModifierFlag>& modifiers,
         MethodDeclContext context = MethodDeclContext::Normal,
         javac::LangLevel langLevel = javac::LangLevel::Eight);
-    bool modifiersAllowedForConstructor(const std::vector<javac::ModifierFlag>& modifiers,
-        ClassDeclContext context = ClassDeclContext::TopLevel);
+    const javac::ModifierFlag* findInvalidConstructorModifier(const std::vector<javac::ModifierFlag>& modifiers);
 
     enum class ModifierDeclaration
     {
@@ -94,8 +93,14 @@ namespace jcutils
         Constructor
     };
 
-    // Returns the first duplicate, or a conflict in the declaration's keyword modifiers.
-    [[nodiscard]] std::optional<javac::ParserExceptionType> findModifierConflict(
+    struct ModifierConflict
+    {
+        javac::ParserExceptionType exception;
+        std::optional<SourceRange> range;
+    };
+
+    // Duplicate errors take priority over access conflicts and declaration-specific conflicts.
+    [[nodiscard]] std::optional<ModifierConflict> findModifierConflict(
         const std::vector<javac::ModifierFlag>& modifiers, ModifierDeclaration declaration);
 
 } // jcutils

@@ -8,12 +8,11 @@
 #include <string>
 #include <vector>
 
+#include "Compiler.h"
 #include "core/JavacConfig.h"
 
 namespace javac
 {
-    class Compiler;
-
     inline constexpr std::string program = "javac";
 
     inline Compiler* compiler = nullptr;

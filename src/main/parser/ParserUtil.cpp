@@ -196,7 +196,7 @@ namespace jcutils
         });
     }
 
-    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers,
+    const javac::ModifierFlag* findInvalidMethodModifier(const std::vector<javac::ModifierFlag>& modifiers,
         MethodDeclContext context, javac::LangLevel langLevel)
     {
         using enum javac::FlagType;
@@ -204,7 +204,7 @@ namespace jcutils
             Public, Protected, Private, Abstract, Static, Final, Native, Synchronized, Strictfp
         };
 
-        return std::ranges::all_of(modifiers, [&](const auto& modifier)
+        const auto invalid = std::ranges::find_if_not(modifiers, [&](const auto& modifier)
         {
             if (!modifier.flagType)
             {
@@ -224,13 +224,14 @@ namespace jcutils
             }
             return false;
         });
+        return invalid == modifiers.end() ? nullptr : &*invalid;
     }
 
-    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers, javac::LangLevel langLevel,
+    const javac::ModifierFlag* findInvalidClassModifier(const std::vector<javac::ModifierFlag>& modifiers, javac::LangLevel langLevel,
         ClassDeclContext context)
     {
         using enum javac::FlagType;
-        return std::ranges::all_of(modifiers, [&](const auto& modifier)
+        const auto invalid = std::ranges::find_if_not(modifiers, [&](const auto& modifier)
         {
             if (!modifier.flagType)
             {
@@ -256,9 +257,10 @@ namespace jcutils
                 return false;
             }
         });
+        return invalid == modifiers.end() ? nullptr : &*invalid;
     }
 
-    bool modifiersAllowedForField(const std::vector<javac::ModifierFlag>& modifiers, ClassDeclContext context)
+    const javac::ModifierFlag* findInvalidFieldModifier(const std::vector<javac::ModifierFlag>& modifiers, ClassDeclContext context)
     {
         static constexpr javac::FlagType allowed[] = {
             javac::FlagType::Public,
@@ -269,7 +271,7 @@ namespace jcutils
             javac::FlagType::Transient,
             javac::FlagType::Volatile
         };
-        return std::ranges::all_of(modifiers, [&](const auto& modifier)
+        const auto invalid = std::ranges::find_if_not(modifiers, [&](const auto& modifier)
         {
             if (!modifier.flagType.has_value())
             {
@@ -282,21 +284,17 @@ namespace jcutils
             }
             return contains(allowed, flag);
         });
+        return invalid == modifiers.end() ? nullptr : &*invalid;
     }
 
-    bool modifiersAllowedForConstructor(const std::vector<javac::ModifierFlag>& modifiers, ClassDeclContext context)
+    const javac::ModifierFlag* findInvalidConstructorModifier(const std::vector<javac::ModifierFlag>& modifiers)
     {
-        if (isInterfaceBody(context))
-        {
-            return false;
-        }
-
         static constexpr javac::FlagType allowed[] = {
             javac::FlagType::Public,
             javac::FlagType::Protected,
             javac::FlagType::Private,
         };
-        return std::ranges::all_of(modifiers, [&](const auto& modifier)
+        const auto invalid = std::ranges::find_if_not(modifiers, [&](const auto& modifier)
         {
             if (!modifier.flagType.has_value())
             {
@@ -304,63 +302,80 @@ namespace jcutils
             }
             return contains(allowed, modifier.flagType.value());
         });
+        return invalid == modifiers.end() ? nullptr : &*invalid;
     }
 
-    std::optional<javac::ParserExceptionType> findModifierConflict(
+    std::optional<ModifierConflict> findModifierConflict(
         const std::vector<javac::ModifierFlag>& modifiers, ModifierDeclaration declaration)
     {
         using javac::FlagType;
         using javac::ParserExceptionType;
 
         std::set<FlagType> flags;
+        const auto declarationConflict = [&]() -> std::optional<ParserExceptionType>
+        {
+            switch (declaration)
+            {
+            case ModifierDeclaration::Class:
+                if ((flags.contains(FlagType::Abstract) && flags.contains(FlagType::Final))
+                    || flags.count(FlagType::Sealed) + flags.count(FlagType::NonSealed) + flags.count(FlagType::Final) > 1)
+                {
+                    return ParserExceptionType::ConflictingClassModifiers;
+                }
+                break;
+
+            case ModifierDeclaration::Field:
+                if (flags.contains(FlagType::Final) && flags.contains(FlagType::Volatile))
+                {
+                    return ParserExceptionType::ConflictingFieldModifiers;
+                }
+                break;
+
+            case ModifierDeclaration::Method:
+                if ((flags.contains(FlagType::Abstract)
+                        && (flags.contains(FlagType::Private) || flags.contains(FlagType::Static)
+                            || flags.contains(FlagType::Final) || flags.contains(FlagType::Synchronized)
+                            || flags.contains(FlagType::Native) || flags.contains(FlagType::Strictfp)
+                            || flags.contains(FlagType::Default)))
+                    || (flags.contains(FlagType::Native) && flags.contains(FlagType::Strictfp))
+                    || (flags.contains(FlagType::Default)
+                        && (flags.contains(FlagType::Static) || flags.contains(FlagType::Private))))
+                {
+                    return ParserExceptionType::ConflictingMethodModifiers;
+                }
+                break;
+
+            case ModifierDeclaration::Constructor:
+                break;
+            }
+            return std::nullopt;
+        };
+
+        std::optional<ModifierConflict> accessConflict;
+        std::optional<ModifierConflict> specificConflict;
         for (const auto& modifier : modifiers)
         {
-            if (modifier.flagType && !flags.insert(*modifier.flagType).second)
+            if (!modifier.flagType)
             {
-                return ParserExceptionType::DuplicateModifier;
+                continue;
+            }
+            if (!flags.insert(*modifier.flagType).second)
+            {
+                return ModifierConflict{ParserExceptionType::DuplicateModifier, modifier.range};
+            }
+            if (!accessConflict
+                && flags.count(FlagType::Public) + flags.count(FlagType::Protected) + flags.count(FlagType::Private) > 1)
+            {
+                accessConflict = ModifierConflict{ParserExceptionType::ConflictingAccessModifiers, modifier.range};
+            }
+            if (!specificConflict)
+            {
+                if (const auto exception = declarationConflict())
+                {
+                    specificConflict = ModifierConflict{*exception, modifier.range};
+                }
             }
         }
-
-        if (flags.count(FlagType::Public) + flags.count(FlagType::Protected) + flags.count(FlagType::Private) > 1)
-        {
-            return ParserExceptionType::ConflictingAccessModifiers;
-        }
-
-        switch (declaration)
-        {
-        case ModifierDeclaration::Class:
-            if ((flags.contains(FlagType::Abstract) && flags.contains(FlagType::Final))
-                || flags.count(FlagType::Sealed) + flags.count(FlagType::NonSealed) + flags.count(FlagType::Final) > 1)
-            {
-                return ParserExceptionType::ConflictingClassModifiers;
-            }
-            break;
-
-        case ModifierDeclaration::Field:
-            if (flags.contains(FlagType::Final) && flags.contains(FlagType::Volatile))
-            {
-                return ParserExceptionType::ConflictingFieldModifiers;
-            }
-            break;
-
-        case ModifierDeclaration::Method:
-            if ((flags.contains(FlagType::Abstract)
-                    && (flags.contains(FlagType::Private) || flags.contains(FlagType::Static)
-                        || flags.contains(FlagType::Final) || flags.contains(FlagType::Synchronized)
-                        || flags.contains(FlagType::Native) || flags.contains(FlagType::Strictfp)
-                        || flags.contains(FlagType::Default)))
-                || (flags.contains(FlagType::Native) && flags.contains(FlagType::Strictfp))
-                || (flags.contains(FlagType::Default)
-                    && (flags.contains(FlagType::Static) || flags.contains(FlagType::Private))))
-            {
-                return ParserExceptionType::ConflictingMethodModifiers;
-            }
-            break;
-
-        case ModifierDeclaration::Constructor:
-            break;
-        }
-
-        return std::nullopt;
+        return accessConflict ? accessConflict : specificConflict;
     }
 } // jcutils

@@ -94,6 +94,7 @@ namespace javac
     public:
         const ParserExceptionType exception;
         const std::optional<Token> actualToken = std::nullopt;
+        const std::optional<SourceRange> range = std::nullopt;
 
         parser_exception(ParserExceptionType exception)
             : logic_error(""), exception(exception)
@@ -101,14 +102,20 @@ namespace javac
 
         }
 
+        parser_exception(ParserExceptionType exception, std::optional<SourceRange> range)
+            : logic_error(""), exception(exception), range(range)
+        {
+
+        }
+
         parser_exception(ParserExceptionType exception, Token actualToken)
-            : logic_error(""), exception(exception), actualToken(actualToken)
+            : logic_error(""), exception(exception), actualToken(actualToken), range(actualToken.range)
         {
 
         }
 
         parser_exception(ParserExceptionType exception, Token actualToken, const std::string& cause)
-            : logic_error(cause), exception(exception), actualToken(actualToken)
+            : logic_error(cause), exception(exception), actualToken(actualToken), range(actualToken.range)
         {
 
         }
