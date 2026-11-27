@@ -44,6 +44,7 @@ namespace javac
         [[nodiscard]]
         bool extensionEnabled(JavacExtension extension) const;
 
+        // Return true if current token is '@' and next token is not "interface" keyword
         [[nodiscard]]
         bool canBeAnnotation() const;
 
@@ -153,6 +154,8 @@ namespace javac
 
         // Method declaration
         MethodDecl parseMethodDecl(std::vector<ModifierFlag> modifiers = {},
+         std::optional<ReceiverParameter> receiverParameter = std::nullopt);
+        ConstructorDecl parseConstructorDecl(std::vector<ModifierFlag> modifiers = {},
          std::optional<ReceiverParameter> receiverParameter = std::nullopt);
         /**
          * Parse parameters declaration in the parenthesis of a method declaration

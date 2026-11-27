@@ -161,10 +161,10 @@ namespace javac
         std::optional<ArrayDimension>* varargs)
     {
         std::vector<ArrayDimension> dimensions;
-        while (checkSymbol(SymbolType::LBracket) || checkSymbol(SymbolType::AtSign)
+        while (checkSymbol(SymbolType::LBracket) || canBeAnnotation()
             || (varargs && checkSymbol(SymbolType::Ellipsis)))
         {
-            if (!allowAnnotation && checkSymbol(SymbolType::AtSign))
+            if (!allowAnnotation && canBeAnnotation())
             {
                 throw parser_exception(ParserExceptionType::AnnotationInArrayDimension, peek());
             }
@@ -411,7 +411,7 @@ namespace javac
         }
 
         std::vector<Annotation> retAnnotations;
-        if (checkSymbol(SymbolType::AtSign))
+        if (canBeAnnotation())
         {
             retAnnotations = parseAnnotations();
         }
@@ -451,6 +451,40 @@ namespace javac
         if (matchSymbol(SymbolType::Semicolon))
         {
             return methodDecl;
+        }
+
+        methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
+
+        return methodDecl;
+    }
+
+    ConstructorDecl Parser::parseConstructorDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
+    {
+        ConstructorDecl methodDecl;
+        methodDecl.modifiers = std::move(modifiers);
+        if (checkSymbol(SymbolType::LAngleBracket))
+        {
+            methodDecl.typeParameters = parseGenericParameters();
+        }
+
+        methodDecl.receiverParam = std::move(receiverParameter);
+        methodDecl.name = expectIdentifier().content;
+
+        expectSymbol(SymbolType::LParen);
+        methodDecl.parameters = parseMethodParameters();
+
+        if (matchKeyword(THROWS))
+        {
+            do
+            {
+                const auto& typeStart = peek();
+                TypeNode type = parseTypeNode();
+                if (!jcutils::canExtImplTo(type))
+                {
+                    throw parser_exception(ParserExceptionType::InvalidThrowsType, typeStart);
+                }
+                methodDecl.thrownTypes.push_back(std::move(type));
+            } while (matchSymbol(SymbolType::Comma));
         }
 
         methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
