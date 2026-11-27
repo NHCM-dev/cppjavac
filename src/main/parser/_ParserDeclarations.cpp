@@ -307,7 +307,7 @@ namespace javac
     }
 
     VariableDecl Parser::parseVariableDecl(std::vector<ModifierFlag> modifiers, bool consumeSemiColon,
-        VariableDeclContext context)
+        jcutils::VariableDeclContext context)
     {
         VariableDecl declaration;
         declaration.range = peek().range;
@@ -341,7 +341,8 @@ namespace javac
 
         const Token typeStart = peek();
         const bool inferred = checkKeyword(VAR) && peek(1).symbol != SymbolType::Dot;
-        const bool enhancedFor = context == VariableDeclContext::EnhancedFor;
+        const bool enhancedFor = context == jcutils::VariableDeclContext::EnhancedFor;
+        const bool tryResource = context == jcutils::VariableDeclContext::TryResource;
         if (inferred)
         {
             declaration.type.objectType = ObjectType::Inferred;
@@ -366,8 +367,12 @@ namespace javac
             declarator.dimensions = parseArrayDimension();
             if (inferred && !declarator.dimensions.empty())
             {
-                throw parser_exception(ParserExceptionType::InvalidInferredVariableDeclaration,
-                    dimensionsStart, "A var declarator cannot have array dimensions");
+                throw parser_exception(ParserExceptionType::ArrayDimensionInInferredVar,dimensionsStart);
+            }
+
+            if (tryResource && !declarator.dimensions.empty())
+            {
+                throw parser_exception(ParserExceptionType::ArrayDimensionInTryResource,dimensionsStart);
             }
 
             if (checkSymbol(SymbolType::Assign))
@@ -379,20 +384,22 @@ namespace javac
                 advance();
                 if (inferred && checkSymbol(SymbolType::LBrace))
                 {
-                    throw parser_exception(ParserExceptionType::InvalidInferredVariableDeclaration,
-                        peek(), "A var initializer cannot be an array initializer");
+                    throw parser_exception(ParserExceptionType::ArrayInitializerInInferredVar,peek());
                 }
                 declarator.initializer = parseVariableInitializer();
             }
+            else if (tryResource)
+            {
+                throw parser_exception(ParserExceptionType::ExpectAssign, peek());
+            }
             else if (inferred && !enhancedFor)
             {
-                throw parser_exception(ParserExceptionType::InvalidInferredVariableDeclaration,
-                    name, "A var declaration requires an initializer");
+                throw parser_exception(ParserExceptionType::ExpectInitializerForInferredVar,name);
             }
 
             declarator.range->end = tokens().at(tokenPointer - 1).range.end;
             declaration.declarators.push_back(std::move(declarator));
-            if ((inferred || enhancedFor) && checkSymbol(SymbolType::Comma))
+            if ((inferred || enhancedFor || tryResource) && checkSymbol(SymbolType::Comma))
             {
                 throw parser_exception(ParserExceptionType::MultipleVarDeclarations, peek());
             }

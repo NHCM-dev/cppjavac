@@ -109,6 +109,13 @@ namespace jcutils
         Block
     };
 
+    enum class VariableDeclContext
+    {
+        Local,
+        EnhancedFor,
+        TryResource
+    };
+
 } // jcutils
 
 #endif //CPPJAVAC_PARSERUTIL_H

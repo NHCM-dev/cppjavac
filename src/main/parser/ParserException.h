@@ -29,6 +29,9 @@ namespace javac
         ExpectVarDeclarationOrVarReference,
         ExpectThrowableType,
         ExpectLParenAfterFor,
+        ExpectRParenOrSemicolon,
+        ExpectAssign,
+        ExpectInitializerForInferredVar,
 
         MultipleExtends,
         MultipleImplements,
@@ -60,6 +63,9 @@ namespace javac
         CannotPermitsTo,
 
         GenericInClassLiteral,
+        ArrayDimensionInTryResource,
+        ArrayDimensionInInferredVar,
+        ArrayInitializerInInferredVar,
 
         ModifierNotAllowedForClass,
         ModifierNotAllowedForField,

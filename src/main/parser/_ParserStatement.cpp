@@ -284,7 +284,7 @@ namespace javac
 
         expectSymbol(SymbolType::LParen);
 
-        statement->variableDecl = parseVariableDecl({}, false, VariableDeclContext::EnhancedFor);
+        statement->variableDecl = parseVariableDecl({}, false, jcutils::VariableDeclContext::EnhancedFor);
         expectSymbol(SymbolType::Colon);
         statement->iterableExpr = parseValue();
         expectSymbol(SymbolType::RParen);
@@ -522,7 +522,61 @@ namespace javac
 
     TryResource Parser::parseTryResource()
     {
-        //TODO: implement
+        const Token start = peek();
+        if (isAtEnd() || checkSymbol(SymbolType::Semicolon) || checkSymbol(SymbolType::RParen))
+        {
+            throw parser_exception(ParserExceptionType::ExpectVarDeclarationOrVarReference, start);
+        }
+
+        bool hasDeclaration = canBeAnnotation() || checkKeyword(FINAL) || checkKeyword(VOID)
+            || (checkKeyword() && primitiveTypeFromKeyword(*peek().keyword));
+        if (!hasDeclaration && checkIdentifier())
+        {
+            const auto savedPointer = tokenPointer;
+            const auto savedRemainder = typeCloseRemainder;
+            try
+            {
+                parseTypeNode();
+                hasDeclaration = checkIdentifier();
+            }
+            catch (const parser_exception&)
+            {
+                // The prefix may be a reference expression.
+            }
+
+            tokenPointer = savedPointer;
+            typeCloseRemainder.reset();
+            if (savedRemainder)
+            {
+                typeCloseRemainder.emplace(*savedRemainder);
+            }
+        }
+
+        TryResource resource;
+        resource.range = start.range;
+        if (hasDeclaration)
+        {
+            resource.resourceDecl = parseVariableDecl({}, false, jcutils::VariableDeclContext::TryResource);
+        }
+        else
+        {
+            if (langLevelMeet(LangLevel::Nine))
+            {
+                resource.referenceExpr = parseValue();
+                if (!dynamic_cast<const NameExpr*>(resource.referenceExpr.get())
+                    && !dynamic_cast<const FieldAccessExpr*>(resource.referenceExpr.get()))
+                {
+                    throw parser_exception(ParserExceptionType::ExpectVarDeclarationOrVarReference, start);
+                }
+            }
+        }
+
+        if (!checkSymbol(SymbolType::Semicolon) && !checkSymbol(SymbolType::RParen))
+        {
+            throw parser_exception(ParserExceptionType::ExpectRParenOrSemicolon, peek());
+        }
+        resource.range->end = tokens().at(tokenPointer - 1).range.end;
+        return resource;
     }
 
     Uptr<YieldStatement> Parser::parseYieldStatement()

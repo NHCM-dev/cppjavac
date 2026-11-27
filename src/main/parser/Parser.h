@@ -178,12 +178,6 @@ namespace javac
         FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context,
             TypeNode type, const Token& firstName);
 
-        enum class VariableDeclContext
-        {
-            Local,
-            EnhancedFor
-        };
-
         /**
          * Parse a local variable declaration with one or more declarators
          * @throws parser_exception if failed to parse the variable declaration
@@ -192,8 +186,9 @@ namespace javac
          * @param context syntactic context of the declaration
          * @return parsed variable declaration
          */
-        VariableDecl parseVariableDecl(std::vector<ModifierFlag> modifiers = {}, bool consumeSemiColon = true,
-            VariableDeclContext context = VariableDeclContext::Local);
+        VariableDecl parseVariableDecl(std::vector<ModifierFlag> modifiers = {},
+            bool consumeSemiColon = true,
+            jcutils::VariableDeclContext context = jcutils::VariableDeclContext::Local);
 
         // Method declaration
         Uptr<InitializerDecl> parseInitializerDecl();
