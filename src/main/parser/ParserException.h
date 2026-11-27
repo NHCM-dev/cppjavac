@@ -28,10 +28,12 @@ namespace javac
         ExpectColonOrArrow,
         ExpectVarDeclarationOrVarReference,
         ExpectThrowableType,
+        ExpectLParenAfterFor,
 
         MultipleExtends,
         MultipleImplements,
         MultiplePermits,
+        MultipleVarDeclarations,
 
         NeedBraceForClassDeclaration,
 
@@ -99,6 +101,10 @@ namespace javac
         StaticInitializerInMemberClass,
 
         ArrowColonMixUseInSwitch,
+        ModifierNotAllowedForLocalVariable,
+        InitializerNotAllowedForEnhancedFor,
+        ExpectStatementExpression,
+        InvalidInferredVariableDeclaration,
     };
 
     class parser_exception : public std::logic_error

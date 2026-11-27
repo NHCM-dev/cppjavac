@@ -291,6 +291,40 @@ namespace javac
         throw parser_exception(ParserExceptionType::UnsupportedExpression, peek());
     }
 
+    Uptr<Expr> Parser::parseStatementExpression()
+    {
+        const Token start = peek();
+        Uptr<Expr> expression = parseValue();
+        if (!dynamic_cast<const AssignExpr*>(expression.get())
+            && !dynamic_cast<const IncDecExpr*>(expression.get())
+            && !dynamic_cast<const CallExpr*>(expression.get())
+            && !dynamic_cast<const NewExpr*>(expression.get()))
+        {
+            throw parser_exception(ParserExceptionType::ExpectStatementExpression, start);
+        }
+        return expression;
+    }
+
+    Uptr<Expr> Parser::parseVariableInitializer()
+    {
+        if (!checkSymbol(SymbolType::LBrace))
+        {
+            return parseValue();
+        }
+
+        auto array = makeUniq<ArrayInitializerExpr>();
+        array->range = expectSymbol(SymbolType::LBrace).range;
+        if (!checkSymbol(SymbolType::RBrace) && !matchSymbol(SymbolType::Comma))
+        {
+            do
+            {
+                array->elements.push_back(parseVariableInitializer());
+            } while (matchSymbol(SymbolType::Comma) && !checkSymbol(SymbolType::RBrace));
+        }
+        array->range->end = expectSymbol(SymbolType::RBrace).range.end;
+        return array;
+    }
+
     Uptr<Expr> Parser::parseValue()
     {
         //TODO: implement

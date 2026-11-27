@@ -66,7 +66,7 @@ namespace javac
     };
 
     // do body while (condition);
-    struct DoStatement : Statement
+    struct DoWhileStatement : Statement
     {
         Uptr<Statement> body; // Body of this construct.
         Uptr<Expr> condition; // Condition expression.

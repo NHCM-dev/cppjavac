@@ -159,9 +159,35 @@ namespace javac
             jcutils::ClassDeclContext classContext, jcutils::MethodDeclContext methodContext,
             std::optional<ReceiverParameter> receiverParameter = std::nullopt);
 
-        // The context identifies the body containing the declaration.
+        /**
+         * Parse a field declaration after its type and first name have been consumed
+         * This function will consume the semicolon at the end
+         * @throws parser_exception if the field declaration is invalid or uses an unsupported initializer
+         * @param modifiers parsed keyword modifiers and annotations
+         * @param context context of the body containing the field declaration
+         * @param type parsed type shared by all declarators
+         * @param firstName token of the first field name
+         * @return parsed field declaration
+         */
         FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context,
             TypeNode type, const Token& firstName);
+
+        enum class VariableDeclContext
+        {
+            Local,
+            EnhancedFor
+        };
+
+        /**
+         * Parse a local variable declaration with one or more declarators
+         * @throws parser_exception if failed to parse the variable declaration
+         * @param modifiers already parsed modifiers and annotations, or empty to parse them from the input
+         * @param consumeSemiColon whether to consume the semicolon at the end
+         * @param context syntactic context of the declaration
+         * @return parsed variable declaration
+         */
+        VariableDecl parseVariableDecl(std::vector<ModifierFlag> modifiers = {}, bool consumeSemiColon = true,
+            VariableDeclContext context = VariableDeclContext::Local);
 
         // Method declaration
         Uptr<InitializerDecl> parseInitializerDecl();
@@ -234,6 +260,15 @@ namespace javac
         * @return parsed expression
         */
         Uptr<Expr> parseValue();
+        /**
+         * Parse one statement expression: an assignment, an increment or decrement,
+         * a method invocation, or a class instance creation expression.
+         * Leave the following semicolon, comma or right parenthesis for the caller.
+         * @throws parser_exception if the expression is invalid or cannot be used as a statement
+         * @return parsed expression
+         */
+        Uptr<Expr> parseStatementExpression();
+        Uptr<Expr> parseVariableInitializer();
 
         // ======
 
@@ -244,6 +279,10 @@ namespace javac
 
 
         // === Statement ===
+
+        Uptr<ExprStatement> parseExprStatement();
+        Uptr<DeclStatement> parseVarDeclStatement();
+        Uptr<ConstructorCallStatement> parseConstructorCallStatement();
 
         /**
          * Parse code block start with '{' and end with '}'
@@ -257,11 +296,18 @@ namespace javac
        * @return parsed statement
        */
         Uptr<Statement> parseStatement(jcutils::StatementContext context);
-        Uptr<ReturnStatement> parseReturnStatement();
-        Uptr<IfStatement> parseIfStatement();
-        Uptr<SwitchStatement> parseSwitchStatement();
-        Uptr<ThrowStatement> parseThrowStatement();
 
+        Uptr<ReturnStatement> parseReturnStatement();
+
+        Uptr<IfStatement> parseIfStatement();
+        Uptr<WhileStatement> parseWhileStatement();
+        Uptr<DoWhileStatement> parseDoWhileStatement();
+        Uptr<ForStatement> parseForStatement();
+        Uptr<EnhancedForStatement> parseEnhancedForStatement();
+
+        Uptr<SwitchStatement> parseSwitchStatement();
+
+        Uptr<ThrowStatement> parseThrowStatement();
         Uptr<LabeledStatement> parseLabeledStatement();
         Uptr<ContinueStatement> parseContinueStatement();
         // This one is for extension
@@ -274,7 +320,7 @@ namespace javac
         Uptr<TryStatement> parseTryStatement();
         TryResource parseTryResource();
 
-        Uptr<DeclStatement> parseVarDeclStatement();
+        Uptr<YieldStatement> parseYieldStatement();
 
         // ======
 

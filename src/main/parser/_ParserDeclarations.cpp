@@ -253,6 +253,106 @@ namespace javac
         return fieldDecl;
     }
 
+    VariableDecl Parser::parseVariableDecl(std::vector<ModifierFlag> modifiers, bool consumeSemiColon,
+        VariableDeclContext context)
+    {
+        VariableDecl declaration;
+        declaration.range = peek().range;
+        if (modifiers.empty())
+        {
+            modifiers = parseModifierFlags();
+        }
+        if (!modifiers.empty() && modifiers.front().range)
+        {
+            declaration.range->begin = modifiers.front().range->begin;
+        }
+
+        bool seenFinal = false;
+        for (const auto& modifier : modifiers)
+        {
+            if (!modifier.flagType)
+            {
+                continue;
+            }
+            if (modifier.flagType != FlagType::Final)
+            {
+                throw parser_exception(ParserExceptionType::ModifierNotAllowedForLocalVariable, modifier.range);
+            }
+            if (seenFinal)
+            {
+                throw parser_exception(ParserExceptionType::DuplicateModifier, modifier.range);
+            }
+            seenFinal = true;
+        }
+        declaration.modifiers = std::move(modifiers);
+
+        const Token typeStart = peek();
+        const bool inferred = checkKeyword(VAR) && peek(1).symbol != SymbolType::Dot;
+        const bool enhancedFor = context == VariableDeclContext::EnhancedFor;
+        if (inferred)
+        {
+            declaration.type.objectType = ObjectType::Inferred;
+            declaration.type.range = advance().range;
+        }
+        else
+        {
+            declaration.type = parseTypeNode();
+            if (declaration.type.objectType == ObjectType::Void)
+            {
+                throw parser_exception(ParserExceptionType::VoidAsTypeSpecification, typeStart);
+            }
+        }
+
+        do
+        {
+            VariableDeclarator declarator;
+            const Token& name = expectIdentifier();
+            declarator.range = name.range;
+            declarator.name = name.content;
+            const Token dimensionsStart = peek();
+            declarator.dimensions = parseArrayDimension();
+            if (inferred && !declarator.dimensions.empty())
+            {
+                throw parser_exception(ParserExceptionType::InvalidInferredVariableDeclaration,
+                    dimensionsStart, "A var declarator cannot have array dimensions");
+            }
+
+            if (checkSymbol(SymbolType::Assign))
+            {
+                if (enhancedFor)
+                {
+                    throw parser_exception(ParserExceptionType::InitializerNotAllowedForEnhancedFor, peek());
+                }
+                advance();
+                if (inferred && checkSymbol(SymbolType::LBrace))
+                {
+                    throw parser_exception(ParserExceptionType::InvalidInferredVariableDeclaration,
+                        peek(), "A var initializer cannot be an array initializer");
+                }
+                declarator.initializer = parseVariableInitializer();
+            }
+            else if (inferred && !enhancedFor)
+            {
+                throw parser_exception(ParserExceptionType::InvalidInferredVariableDeclaration,
+                    name, "A var declaration requires an initializer");
+            }
+
+            declarator.range->end = tokens().at(tokenPointer - 1).range.end;
+            declaration.declarators.push_back(std::move(declarator));
+            if ((inferred || enhancedFor) && checkSymbol(SymbolType::Comma))
+            {
+                throw parser_exception(ParserExceptionType::MultipleVarDeclarations, peek());
+            }
+        } while (matchSymbol(SymbolType::Comma));
+
+        declaration.range->end = declaration.declarators.back().range->end;
+        if (consumeSemiColon)
+        {
+            declaration.range->end = expectSymbol(SymbolType::Semicolon).range.end;
+        }
+        return declaration;
+    }
+
     Uptr<InitializerDecl> Parser::parseInitializerDecl()
     {
         InitializerDecl decl;

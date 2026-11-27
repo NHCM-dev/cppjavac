@@ -6,6 +6,21 @@
 
 namespace javac
 {
+    Uptr<ExprStatement> Parser::parseExprStatement()
+    {
+        //TODO: Implement
+    }
+
+    Uptr<DeclStatement> Parser::parseVarDeclStatement()
+    {
+        //TODO: Implement
+    }
+
+    Uptr<ConstructorCallStatement> Parser::parseConstructorCallStatement()
+    {
+        //TODO: Implement
+    }
+
     Uptr<BlockStatement> Parser::parseBlock()
     {
         Uptr<BlockStatement> blockStatement = makeUniq<BlockStatement>();
@@ -33,9 +48,12 @@ namespace javac
             statement->range = advance().range;
             return statement;
         }
+
         if (checkKeyword(THROW))            return parseThrowStatement();
         if (checkKeyword(RETURN))           return parseReturnStatement();
         if (checkKeyword(IF))               return parseIfStatement();
+        if (checkKeyword(WHILE))            return parseWhileStatement();
+        if (checkKeyword(DO))               return parseDoWhileStatement();
         if (checkKeyword(SWITCH))           return parseSwitchStatement();
         if (checkKeyword(CONTINUE))         return parseContinueStatement();
         if (checkKeyword(GOTO))             return parseGotoStatement();
@@ -44,10 +62,52 @@ namespace javac
         if (checkKeyword(SYNCHRONIZED))     return parseSynchronizedStatement();
         if (checkKeyword(TRY))              return parseTryStatement();
 
+        if (checkKeyword(FOR))
+        {
+            if (peek(1).symbol != SymbolType::LParen)
+            {
+                throw parser_exception(ParserExceptionType::ExpectLParenAfterFor, peek(1));
+            }
+
+            const auto savedPointer = tokenPointer;
+            const auto savedRemainder = typeCloseRemainder;
+            bool enhanced = false;
+
+            advance(); // for
+            advance(); // (
+            try
+            {
+                parseModifierFlags();
+                parseTypeNode();
+                expectIdentifier();
+                parseArrayDimension();
+                enhanced = checkSymbol(SymbolType::Colon);
+            }
+            catch (const parser_exception&)
+            {
+                // This prefix is not an enhanced-for declaration.
+            }
+
+            tokenPointer = savedPointer;
+            typeCloseRemainder.reset();
+            if (savedRemainder)
+            {
+                typeCloseRemainder.emplace(*savedRemainder);
+            }
+
+            if (enhanced)
+            {
+                return parseEnhancedForStatement();
+            }
+            return parseForStatement();
+        }
+
         if (checkIdentifier() && peek(1).symbol == SymbolType::Colon)
         {
             return parseLabeledStatement();
         }
+
+        if (checkKeyword(YIELD))            return parseYieldStatement();
 
         std::vector<Annotation> pendingAnnotations = {};
         if (canBeAnnotation())
@@ -98,6 +158,143 @@ namespace javac
         statement->range->end = lastBranch->range->end;
         return statement;
     }
+
+    Uptr<WhileStatement> Parser::parseWhileStatement()
+    {
+        Uptr<WhileStatement> statement = makeUniq<WhileStatement>();
+
+        statement->range = expectKeyword(WHILE).range;
+
+        expectSymbol(SymbolType::LParen);
+        statement->condition = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        statement->body = parseStatement(jcutils::StatementContext::Embedded);
+        statement->range->end = statement->body->range->end;
+
+        return statement;
+    }
+
+    Uptr<DoWhileStatement> Parser::parseDoWhileStatement()
+    {
+        Uptr<DoWhileStatement> statement = makeUniq<DoWhileStatement>();
+
+        statement->range = expectKeyword(DO).range;
+
+        statement->body = parseStatement(jcutils::StatementContext::Embedded);
+        expectKeyword(WHILE);
+
+        expectSymbol(SymbolType::LParen);
+        statement->condition = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
+    }
+
+    Uptr<ForStatement> Parser::parseForStatement()
+    {
+        Uptr<ForStatement> statement = makeUniq<ForStatement>();
+
+        statement->range = expectKeyword(FOR).range;
+
+        expectSymbol(SymbolType::LParen);
+        if (!checkSymbol(SymbolType::Semicolon))
+        {
+            bool hasDeclaration = canBeAnnotation() || checkKeyword(FINAL) || checkKeyword(VOID)
+                || (checkKeyword() && primitiveTypeFromKeyword(*peek().keyword));
+
+            if (!hasDeclaration && checkIdentifier())
+            {
+                const auto savedPointer = tokenPointer;
+                const auto savedRemainder = typeCloseRemainder;
+                try
+                {
+                    parseTypeNode();
+                    hasDeclaration = checkIdentifier();
+                }
+                catch (const parser_exception&)
+                {
+                    // The initializer can start with tokens shared by types and expressions.
+                }
+
+                tokenPointer = savedPointer;
+                typeCloseRemainder.reset();
+                if (savedRemainder)
+                {
+                    typeCloseRemainder.emplace(*savedRemainder);
+                }
+            }
+
+            if (hasDeclaration)
+            {
+                statement->initializerDecl = parseVariableDecl({}, false);
+            }
+            else
+            {
+                do
+                {
+                    statement->initializerExprs.push_back(parseStatementExpression());
+                } while (matchSymbol(SymbolType::Comma));
+            }
+        }
+        expectSymbol(SymbolType::Semicolon);
+
+        if (matchSymbol(SymbolType::Semicolon))
+        {
+            goto FORUPDATE;
+        }
+
+        {
+            // Expression
+            statement->condition = parseValue();
+        }
+
+        expectSymbol(SymbolType::Semicolon);
+
+        FORUPDATE:
+        if (matchSymbol(SymbolType::RParen))
+        {
+            goto END;
+        }
+
+        {
+            // ForUpdate
+            do
+            {
+                statement->updateExprs.push_back(parseStatementExpression());
+            } while (matchSymbol(SymbolType::Comma));
+        }
+
+        expectSymbol(SymbolType::RParen);
+
+        END:
+        statement->body = parseStatement(jcutils::StatementContext::Embedded);
+        statement->range->end = statement->body->range->end;
+
+        return statement;
+    }
+
+    Uptr<EnhancedForStatement> Parser::parseEnhancedForStatement()
+    {
+        Uptr<EnhancedForStatement> statement = makeUniq<EnhancedForStatement>();
+
+        statement->range = expectKeyword(FOR).range;
+
+        expectSymbol(SymbolType::LParen);
+
+        statement->variableDecl = parseVariableDecl({}, false, VariableDeclContext::EnhancedFor);
+        expectSymbol(SymbolType::Colon);
+        statement->iterableExpr = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        statement->body = parseStatement(jcutils::StatementContext::Embedded);
+        statement->range->end = statement->body->range->end;
+
+        return statement;
+    }
+
 
     Uptr<SwitchStatement> Parser::parseSwitchStatement()
     {
@@ -327,9 +524,16 @@ namespace javac
     {
         //TODO: implement
     }
-    Uptr<DeclStatement> Parser::parseVarDeclStatement()
+
+    Uptr<YieldStatement> Parser::parseYieldStatement()
     {
-        //TODO: Parse a resource declaration and leave the separator to the caller.
-        throw parser_exception(ParserExceptionType::UnsupportedStatement, peek());
+        Uptr<YieldStatement> statement = makeUniq<YieldStatement>();
+        statement->range = expectKeyword(YIELD).range;
+
+        statement->value = parseValue();
+
+        statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
+
+        return statement;
     }
 } // javac
