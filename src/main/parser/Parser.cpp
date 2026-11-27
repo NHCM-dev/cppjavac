@@ -85,7 +85,7 @@ namespace javac
                 modifiers.push_back(std::move(modifier));
             }
 
-            std::unique_ptr<ClassDecl> classDecl = std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers)));
+            Uptr<ClassDecl> classDecl = makeUniq<ClassDecl>(parseClassDecl(std::move(modifiers)));
             compilationUnit.decls.push_back(std::move(classDecl));
             annotations = parseAnnotations();
         }
@@ -110,7 +110,7 @@ namespace javac
 
             TypeNode array;
             array.objectType = ObjectType::Array;
-            array.elementType = std::make_unique<TypeNode>(std::move(node));
+            array.elementType = makeUniq<TypeNode>(std::move(node));
             array.dimensions = std::move(dimensions);
             return array;
         };
@@ -209,7 +209,7 @@ namespace javac
                 {
                     arg.genericType = GenericType::Extends;
                     const Token& token = peek();
-                    arg.type = std::make_unique<TypeNode>(parseTypeNode());
+                    arg.type = makeUniq<TypeNode>(parseTypeNode());
                     if (!jcutils::canGeneric(*arg.type))
                     {
                         throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
@@ -221,7 +221,7 @@ namespace javac
                 {
                     arg.genericType = GenericType::Super;
                     const Token& token = peek();
-                    arg.type = std::make_unique<TypeNode>(parseTypeNode());
+                    arg.type = makeUniq<TypeNode>(parseTypeNode());
                     if (!jcutils::canGeneric(*arg.type))
                     {
                         throw parser_exception(ParserExceptionType::CannotBeSuper, token);
@@ -235,7 +235,7 @@ namespace javac
             }
             arg.genericType = GenericType::Exact;
             const Token& token = peek();
-            arg.type = std::make_unique<TypeNode>(parseTypeNode(std::move(pendingAnnotations)));
+            arg.type = makeUniq<TypeNode>(parseTypeNode(std::move(pendingAnnotations)));
             if (!jcutils::canGeneric(*arg.type))
             {
                 throw parser_exception(ParserExceptionType::InvalidExactGeneric, token);
@@ -330,7 +330,7 @@ namespace javac
         const auto methodContext = jcutils::haveModifier(classDecl.modifiers, FlagType::Abstract)
             ? jcutils::MethodDeclContext::WithinAbstractClass : jcutils::MethodDeclContext::Normal;
 
-        while (std::unique_ptr<Decl> member = parseNormalClassMember(classDecl.name, bodyContext, methodContext))
+        while (Uptr<Decl> member = parseNormalClassMember(classDecl.name, bodyContext, methodContext))
         {
             classDecl.members.push_back(std::move(member));
         }
@@ -340,7 +340,7 @@ namespace javac
         return classDecl;
     }
 
-    std::unique_ptr<Decl> Parser::parseNormalClassMember(std::u16string_view className,
+    Uptr<Decl> Parser::parseNormalClassMember(std::u16string_view className,
         jcutils::ClassDeclContext classContext, jcutils::MethodDeclContext methodContext,
         std::optional<ReceiverParameter> receiverParameter)
     {
@@ -374,7 +374,7 @@ namespace javac
         // Check for class
         if (checkKeyword(CLASS))
         {
-            return std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers), jcutils::ClassDeclContext::Member));
+            return makeUniq<ClassDecl>(parseClassDecl(std::move(modifiers), jcutils::ClassDeclContext::Member));
         }
         //TODO: Check for interface
         //TODO: Check for enum
@@ -401,7 +401,7 @@ namespace javac
             {
                 throw parser_exception(ParserExceptionType::ConstructorNameMismatch, name);
             }
-            return std::make_unique<ConstructorDecl>(parseConstructorDecl(std::move(modifiers), classContext,
+            return makeUniq<ConstructorDecl>(parseConstructorDecl(std::move(modifiers), classContext,
                 std::move(typeParameters), name, std::move(receiverParameter)));
         }
 
@@ -414,7 +414,7 @@ namespace javac
         // '(' means is a method
         if (checkSymbol(SymbolType::LParen))
         {
-            return std::make_unique<MethodDecl>(
+            return makeUniq<MethodDecl>(
                 parseMethodDecl(std::move(modifiers),
                     methodContext,
                     std::move(typeParameters),
@@ -443,7 +443,7 @@ namespace javac
         {
             throw parser_exception(ParserExceptionType::VoidAsTypeSpecification, typeStart);
         }
-        return std::make_unique<FieldDecl>(parseFieldDecl(std::move(modifiers), classContext, std::move(type), name));
+        return makeUniq<FieldDecl>(parseFieldDecl(std::move(modifiers), classContext, std::move(type), name));
     }
 
     std::vector<ModifierFlag> Parser::parseModifierFlags()
@@ -542,18 +542,18 @@ namespace javac
         return fieldDecl;
     }
 
-    std::unique_ptr<InitializerDecl> Parser::parseInitializerDecl()
+    Uptr<InitializerDecl> Parser::parseInitializerDecl()
     {
         InitializerDecl decl;
         if (matchKeyword(STATIC))
         {
             decl.isStatic = true;
-            decl.body = std::make_unique<BlockStatement>(parseMethodBody());
+            decl.body = makeUniq<BlockStatement>(parseBlock());
         } else
         {
-            decl.body = std::make_unique<BlockStatement>(parseMethodBody());
+            decl.body = makeUniq<BlockStatement>(parseBlock());
         }
-        return std::make_unique<InitializerDecl>(std::move(decl));
+        return makeUniq<InitializerDecl>(std::move(decl));
     }
 
     MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers,
@@ -649,7 +649,7 @@ namespace javac
 
         if (needsBody)
         {
-            methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
+            methodDecl.body = makeUniq<BlockStatement>(parseBlock());
         }
         else
         {
@@ -700,14 +700,14 @@ namespace javac
             } while (matchSymbol(SymbolType::Comma));
         }
 
-        methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
+        methodDecl.body = makeUniq<BlockStatement>(parseBlock());
 
         return methodDecl;
     }
 
-    std::vector<std::unique_ptr<ParameterDecl>> Parser::parseMethodParameters()
+    std::vector<Uptr<ParameterDecl>> Parser::parseMethodParameters()
     {
-        std::vector<std::unique_ptr<ParameterDecl>> decls;
+        std::vector<Uptr<ParameterDecl>> decls;
         if (matchSymbol(SymbolType::RParen))
         {
             return decls;
@@ -715,7 +715,7 @@ namespace javac
 
         do
         {
-            auto parameter = std::make_unique<ParameterDecl>();
+            auto parameter = makeUniq<ParameterDecl>();
             bool seenFinal = false;
             while (checkKeyword(FINAL) || canBeAnnotation())
             {
@@ -771,14 +771,47 @@ namespace javac
         return decls;
     }
 
-    BlockStatement Parser::parseMethodBody()
+    BlockStatement Parser::parseBlock()
     {
-        expectSymbol(SymbolType::LBrace);
+        BlockStatement blockStatement;
+        blockStatement.range = expectSymbol(SymbolType::LBrace).range;
 
-        //TODO: Implement parse the body
+        while (!isAtEnd() && !checkSymbol(SymbolType::RBrace))
+        {
+            blockStatement.statements.push_back(parseStatement());
+        }
 
-        expectSymbol(SymbolType::RBrace);
-        return {};
+        blockStatement.range->end = expectSymbol(SymbolType::RBrace).range.end;
+        return blockStatement;
+    }
+
+    Uptr<Statement> Parser::parseStatement()
+    {
+        if (checkSymbol(SymbolType::LBrace))
+        {
+            return makeUniq<BlockStatement>(parseBlock());
+        }
+
+        const Token& start = peek();
+        if (matchKeyword(RETURN))
+        {
+            ReturnStatement statement;
+            statement.range = start.range;
+            if (!checkSymbol(SymbolType::Semicolon))
+            {
+                statement.value = parseValue();
+            }
+            statement.range->end = expectSymbol(SymbolType::Semicolon).range.end;
+            return makeUniq<ReturnStatement>(std::move(statement));
+        }
+
+        std::vector<Annotation> pendingAnnotations = {};
+        if (canBeAnnotation())
+        {
+            pendingAnnotations = parseAnnotations();
+        }
+
+        //TODO: Implement rest of the statement parsing
     }
 
     std::vector<Annotation> Parser::parseAnnotations()
@@ -838,11 +871,11 @@ namespace javac
         return arg;
     }
 
-    std::unique_ptr<Expr> Parser::parseElementValue()
+    Uptr<Expr> Parser::parseElementValue()
     {
         if (checkSymbol(SymbolType::AtSign))
         {
-            return std::make_unique<Annotation>(parseAnnotation());
+            return makeUniq<Annotation>(parseAnnotation());
         }
 
         if (matchSymbol(SymbolType::LBrace))
@@ -853,7 +886,7 @@ namespace javac
         return parseElementExpr();
     }
 
-    std::unique_ptr<Expr> Parser::parseElementArray()
+    Uptr<Expr> Parser::parseElementArray()
     {
         ArrayInitializerExpr arrayInitializer = {};
         if (!checkSymbol(SymbolType::RBrace) && !matchSymbol(SymbolType::Comma))
@@ -864,10 +897,10 @@ namespace javac
             } while (matchSymbol(SymbolType::Comma) && !checkSymbol(SymbolType::RBrace));
         }
         expectSymbol(SymbolType::RBrace);
-        return std::make_unique<ArrayInitializerExpr>(std::move(arrayInitializer));
+        return makeUniq<ArrayInitializerExpr>(std::move(arrayInitializer));
     }
 
-    std::unique_ptr<Expr> Parser::parseElementExpr()
+    Uptr<Expr> Parser::parseElementExpr()
     {
         //TODO: implement
         throw parser_exception(ParserExceptionType::UnsupportedElementExpression, peek());
@@ -907,7 +940,7 @@ namespace javac
         return parameters;
     }
 
-    std::unique_ptr<Expr> Parser::parseBasicLiteral()
+    Uptr<Expr> Parser::parseBasicLiteral()
     {
         const Token& token = advance();
         switch (token.tokenType)
@@ -931,11 +964,11 @@ namespace javac
                 {
                     LongExpr longExpr;
                     longExpr.value = number;
-                    return  std::make_unique<LongExpr>(longExpr);
+                    return  makeUniq<LongExpr>(longExpr);
                 }
                 IntExpr intExpr;
                 intExpr.value = static_cast<int32_t>(number);
-                return  std::make_unique<IntExpr>(intExpr);
+                return  makeUniq<IntExpr>(intExpr);
             }
             case TokenType::FloatLiteral:
             {
@@ -945,12 +978,12 @@ namespace javac
                     {
                         FloatExpr floatExpr;
                         floatExpr.value = jcutils::floatFromString(token.content);
-                        return std::make_unique<FloatExpr>(floatExpr);
+                        return makeUniq<FloatExpr>(floatExpr);
                     }
 
                     DoubleExpr doubleExpr;
                     doubleExpr.value = jcutils::doubleFromString(token.content);
-                    return std::make_unique<DoubleExpr>(doubleExpr);
+                    return makeUniq<DoubleExpr>(doubleExpr);
                 }
                 catch (const std::invalid_argument& e)
                 {
@@ -965,24 +998,24 @@ namespace javac
             {
                 StringExpr stringExpr;
                 stringExpr.value = token.content;
-                return  std::make_unique<StringExpr>(stringExpr);
+                return  makeUniq<StringExpr>(stringExpr);
             }
             case TokenType::CharacterLiteral:
             {
                 CharExpr charExpr;
                 charExpr.value = token.content.front();
-                return  std::make_unique<CharExpr>(charExpr);
+                return  makeUniq<CharExpr>(charExpr);
             }
             case TokenType::BooleanLiteral:
             {
                 BooleanExpr boolExpr;
                 boolExpr.value = jcutils::boolFromString(token.content);
-                return std::make_unique<BooleanExpr>(boolExpr);
+                return makeUniq<BooleanExpr>(boolExpr);
             }
             case TokenType::NullLiteral:
             {
                 NullExpr nullExpr;
-                return std::make_unique<NullExpr>(nullExpr);
+                return makeUniq<NullExpr>(nullExpr);
             }
             default:
             {
@@ -991,7 +1024,7 @@ namespace javac
         }
     }
 
-    std::unique_ptr<ClassLiteralExpr> Parser::parseClassLiteral()
+    Uptr<ClassLiteralExpr> Parser::parseClassLiteral()
     {
         TypeNode node;
 
@@ -1004,7 +1037,7 @@ namespace javac
                 {
                     TypeNode array;
                     array.objectType = ObjectType::Array;
-                    array.elementType = std::make_unique<TypeNode>(std::move(node));
+                    array.elementType = makeUniq<TypeNode>(std::move(node));
                     array.dimensions = std::move(dimensions);
                     node = std::move(array);
                 }
@@ -1012,7 +1045,7 @@ namespace javac
 
             expectSymbol(SymbolType::Dot);
             expectKeyword(CLASS);
-            auto literal = std::make_unique<ClassLiteralExpr>();
+            auto literal = makeUniq<ClassLiteralExpr>();
             literal->type = std::move(node);
             return literal;
         };
@@ -1101,5 +1134,11 @@ namespace javac
         }
 
         return finishType();
+    }
+
+    Uptr<Expr> Parser::parseValue()
+    {
+        //TODO: IMPORTANT: parse a value as expression, include arithmetic expression,
+        // method calls, new XXX etc. Any value that has its own type
     }
 } // javac

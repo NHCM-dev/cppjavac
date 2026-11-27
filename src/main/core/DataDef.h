@@ -18,6 +18,15 @@ namespace fs = std::filesystem;
 
 using ByteArray = std::vector<std::byte>;
 
+template<typename T>
+using Uptr = std::unique_ptr<T>;
+
+template<typename T, typename... Args>
+constexpr auto makeUniq(Args&&... args)
+{
+    return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
 /**
  * A class that inherit std::filesystem::path, will convert value constructed into UTF8 string
  */

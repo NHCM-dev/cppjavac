@@ -37,7 +37,7 @@ namespace javac
     struct AnnotationArg : ASTNode
     {
         std::optional<std::u16string> name; // Argument name; absent for the single-value form @Name(1).
-        std::unique_ptr<Expr> value; // Annotation argument expression.
+        Uptr<Expr> value; // Annotation argument expression.
     };
 
     // An annotation use: @Name or @Name(value = 1).
@@ -81,7 +81,7 @@ namespace javac
     {
         GenericType genericType = GenericType::Exact; // Exact type or wildcard form.
         std::vector<Annotation> annotations; // Annotations on the wildcard ?.
-        std::unique_ptr<TypeNode> type; // Exact argument or wildcard bound; null for unbounded ?.
+        Uptr<TypeNode> type; // Exact argument or wildcard bound; null for unbounded ?.
     };
 
     // One name segment: Outer<T> or Inner<U> in Outer<T>.Inner<U>. Separate by dot '.'
@@ -106,7 +106,7 @@ namespace javac
         std::vector<Annotation> annotations; // Annotations on a primitive, void or var; class annotations belong to nameParts.
         std::optional<PrimitiveType> primitiveType; // Set only for ObjectType::Primitive, such as int or boolean.
         std::vector<TypeNamePart> nameParts; // Qualified class name segments, each with its own type arguments.
-        std::unique_ptr<TypeNode> elementType; // Base element type for an array; e.g. int in int[][].
+        Uptr<TypeNode> elementType; // Base element type for an array; e.g. int in int[][].
         std::vector<ArrayDimension> dimensions; // Array dimensions in source order.
     };
 
@@ -123,7 +123,7 @@ namespace javac
     {
         std::u16string name; // Declared or referenced name.
         std::vector<ArrayDimension> dimensions; // Extra [] after the variable name: int value[].
-        std::unique_ptr<Expr> initializer; // Optional initializer; null when no initializer was written.
+        Uptr<Expr> initializer; // Optional initializer; null when no initializer was written.
     };
 
     // Shared type and modifiers for one or more declared variables.
@@ -146,7 +146,7 @@ namespace javac
     struct RecordPattern : Pattern
     {
         TypeNode type; // Record type to deconstruct.
-        std::vector<std::unique_ptr<Pattern>> components; // Components in source order.
+        std::vector<Uptr<Pattern>> components; // Components in source order.
     };
 
     // An unnamed pattern: _.

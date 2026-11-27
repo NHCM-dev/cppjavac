@@ -82,7 +82,7 @@ namespace javac
         CompilationUnitType unitType = CompilationUnitType::Ordinary; // Selects ordinary, modular or compact source form.
         std::optional<PackageDecl> packageDecl; // Optional package declaration.
         std::vector<ImportDecl> importDecls; // Imports in source order.
-        std::vector<std::unique_ptr<Decl>> decls; // Top-level declarations; compact form may also contain members.
+        std::vector<Uptr<Decl>> decls; // Top-level declarations; compact form may also contain members.
         std::optional<ModuleDecl> moduleDecl; // Module declaration for a modular compilation unit.
     };
 
@@ -100,7 +100,7 @@ namespace javac
         std::optional<TypeNode> type; // Absent for an implicitly typed lambda parameter: x -> x.
         std::vector<ArrayDimension> dimensions; // Extra [] after the variable name: int value[].
         std::optional<ArrayDimension> varargs; // Present for ...; stores annotations on the ellipsis.
-        std::unique_ptr<Expr> defaultValue; // Optional parameter default; requires AllowDefaultParameters.
+        Uptr<Expr> defaultValue; // Optional parameter default; requires AllowDefaultParameters.
     };
 
     // An explicit receiver: A this or Outer Outer.this.
@@ -120,12 +120,12 @@ namespace javac
         TypeNode returnType; // Written return type, including void.
         std::optional<ReceiverParameter> receiverParam; // Optional explicit this parameter; separate from ordinary parameters.
 
-        std::vector<std::unique_ptr<ParameterDecl>> parameters; // Formal parameters in source order.
+        std::vector<Uptr<ParameterDecl>> parameters; // Formal parameters in source order.
         std::vector<ArrayDimension> returnDimensions; // Extra [] after the parameter list: int method()[].
         std::vector<TypeNode> thrownTypes; // Exception types after throws.
-        std::unique_ptr<Expr> defaultValue; // Annotation element default: int value() default 1;
+        Uptr<Expr> defaultValue; // Annotation element default: int value() default 1;
 
-        std::unique_ptr<BlockStatement> body; // Method body; null for a declaration ending in ;
+        Uptr<BlockStatement> body; // Method body; null for a declaration ending in ;
     };
 
     // A constructor; compact form is used by records.
@@ -137,16 +137,16 @@ namespace javac
         bool isCompact = false; // True for a record compact constructor: Point { ... }.
         std::vector<GenericParameter> typeParameters; // Declared generic parameters: <T extends A>.
         std::optional<ReceiverParameter> receiverParam; // Optional explicit this parameter; separate from ordinary parameters.
-        std::vector<std::unique_ptr<ParameterDecl>> parameters; // Formal parameters in source order.
+        std::vector<Uptr<ParameterDecl>> parameters; // Formal parameters in source order.
         std::vector<TypeNode> thrownTypes; // Exception types after throws.
-        std::unique_ptr<BlockStatement> body; // Body of this construct.
+        Uptr<BlockStatement> body; // Body of this construct.
     };
 
     // An instance { ... } or static { ... } initializer.
     struct InitializerDecl : Decl
     {
         bool isStatic = false; // True for the static form.
-        std::unique_ptr<BlockStatement> body; // Body of this construct.
+        Uptr<BlockStatement> body; // Body of this construct.
     };
 
     // Common name, modifiers and members of a declared type.
@@ -155,7 +155,7 @@ namespace javac
         std::vector<ModifierFlag> modifiers; // Keyword modifiers and annotations in source order.
         std::u16string name; // Declared or referenced name.
 
-        std::vector<std::unique_ptr<Decl>> members; // Member declarations in source order.
+        std::vector<Uptr<Decl>> members; // Member declarations in source order.
     };
 
     // class C<T> extends B implements I permits D { ... }.
@@ -183,8 +183,8 @@ namespace javac
     {
         std::vector<Annotation> annotations; // Annotations attached to this syntax element.
         std::u16string name; // Declared or referenced name.
-        std::vector<std::unique_ptr<Expr>> constructorArgs; // Arguments passed to the enum constructor.
-        std::optional<std::vector<std::unique_ptr<Decl>>> members; // Absent without a class body; present and empty for {}.
+        std::vector<Uptr<Expr>> constructorArgs; // Arguments passed to the enum constructor.
+        std::optional<std::vector<Uptr<Decl>>> members; // Absent without a class body; present and empty for {}.
     };
 
     // enum Color implements I { RED, BLUE; ... }.

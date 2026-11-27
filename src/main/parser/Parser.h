@@ -168,7 +168,7 @@ namespace javac
          * @return A pointer of the member declaration, Can be: ClassDecl, FieldDecl, MethodDecl, ConstructorDecl,
          * InitializerDecl, or return nullptr at the closing brace
          */
-        std::unique_ptr<Decl> parseNormalClassMember(std::u16string_view className,
+        Uptr<Decl> parseNormalClassMember(std::u16string_view className,
             jcutils::ClassDeclContext classContext, jcutils::MethodDeclContext methodContext,
             std::optional<ReceiverParameter> receiverParameter = std::nullopt);
 
@@ -179,7 +179,7 @@ namespace javac
             TypeNode type, const Token& firstName);
 
         // Method declaration
-        std::unique_ptr<InitializerDecl> parseInitializerDecl();
+        Uptr<InitializerDecl> parseInitializerDecl();
         MethodDecl parseMethodDecl(std::vector<ModifierFlag> modifiers, jcutils::MethodDeclContext context,
             std::vector<GenericParameter> typeParameters, TypeNode returnType, const Token& returnTypeStart,
             const Token& name, std::optional<ReceiverParameter> receiverParameter = std::nullopt);
@@ -192,8 +192,21 @@ namespace javac
          * @throws parser_exception if failed to parse parameters
          * @return parsed method parameters
          */
-        std::vector<std::unique_ptr<ParameterDecl>> parseMethodParameters();
-        BlockStatement parseMethodBody();
+        std::vector<Uptr<ParameterDecl>> parseMethodParameters();
+
+        // Parse range of codes
+        /**
+         * Parse code block start with '{' and end with '}'
+         * @throw parser_exception if the block is invalid
+         * @return parsed block statement
+         */
+        BlockStatement parseBlock();
+        /**
+       * Parse a single code statement
+       * @throw parser_exception if the statement is invalid
+       * @return parsed statement
+       */
+        Uptr<Statement> parseStatement();
 
         // Annotation declaration
         /**
@@ -209,13 +222,13 @@ namespace javac
          * Parse value for both the value fit in annotation declaration and method default value declaration
          * @return parsed expression for the value
          */
-        std::unique_ptr<Expr> parseElementValue();
+        Uptr<Expr> parseElementValue();
         /**
          * Parse an array initializer for annotation value, expect a '{' is consumed already
          * @return pointer of an ArrayInitializerExpr
          */
-        std::unique_ptr<Expr> parseElementArray();
-        std::unique_ptr<Expr> parseElementExpr();
+        Uptr<Expr> parseElementArray();
+        Uptr<Expr> parseElementExpr();
 
         /**
          * Parse generic parameters for class declaration or method declaration
@@ -229,13 +242,15 @@ namespace javac
          * @throw parser_exception if rhw token is not a valid basic literal
          * @return parsed basic literal
          */
-        std::unique_ptr<Expr> parseBasicLiteral();
+        Uptr<Expr> parseBasicLiteral();
          /**
          * Try to parse until construct a valid class literal (XXX.class) and return it
          * @throw parser_exception if there is no class literal to parse start from now
          * @return parsed class literal
          */
-        std::unique_ptr<ClassLiteralExpr> parseClassLiteral();
+        Uptr<ClassLiteralExpr> parseClassLiteral();
+
+        Uptr<Expr> parseValue();
 
         void parseOrdinary();
         void parseModular();
