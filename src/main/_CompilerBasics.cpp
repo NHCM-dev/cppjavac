@@ -3,6 +3,7 @@
 //
 
 #include "Compiler.h"
+#include "util/FileUtil.h"
 #include "util/PrintUtil.h"
 
 namespace javac
