@@ -75,6 +75,10 @@ namespace javac
                 modifier.annotation = std::move(annotation);
                 modifiers.push_back(std::move(modifier));
             }
+            for (auto& modifier : parseModifierFlags())
+            {
+                modifiers.push_back(std::move(modifier));
+            }
             compilationUnit.decls.push_back(std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers))));
             annotations = parseAnnotations();
         }
@@ -260,6 +264,17 @@ namespace javac
         expectKeyword(CLASS);
 
         ClassDecl decl;
+
+        if (!jcutils::modifiersAllowedForClass(modifiers, sourceLangLevel))
+        {
+            //TODO: site source for invalid modifiers
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForClass);
+        }
+        if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Class))
+        {
+            //TODO: Attach the conflicting modifier token site.
+            throw parser_exception(*conflict);
+        }
         decl.modifiers = std::move(modifiers);
         decl.name = expectIdentifier().content;
 
@@ -367,7 +382,16 @@ namespace javac
     FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers)
     {
         FieldDecl fieldDecl;
-
+        if (!jcutils::modifiersAllowedForField(modifiers))
+        {
+            //TODO: site source for invalid modifiers
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForField);
+        }
+        if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Field))
+        {
+            //TODO: Attach the conflicting modifier token site.
+            throw parser_exception(*conflict);
+        }
         fieldDecl.modifiers = std::move(modifiers);
 
         const Token& token = peek();
@@ -404,6 +428,16 @@ namespace javac
     MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
     {
         MethodDecl methodDecl;
+        if (!jcutils::modifiersAllowedForMethod(modifiers))
+        {
+            //TODO: site source for invalid modifiers
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForMethod);
+        }
+        if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Method))
+        {
+            //TODO: Attach the conflicting modifier token site.
+            throw parser_exception(*conflict);
+        }
         methodDecl.modifiers = std::move(modifiers);
         if (checkSymbol(SymbolType::LAngleBracket))
         {
@@ -461,7 +495,18 @@ namespace javac
     ConstructorDecl Parser::parseConstructorDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
     {
         ConstructorDecl methodDecl;
+        if (!jcutils::modifiersAllowedForConstructor(modifiers))
+        {
+            //TODO: site source for invalid modifiers
+            throw parser_exception(ParserExceptionType::ModifierNotAllowedForConstructor);
+        }
+        if (const auto conflict = jcutils::findModifierConflict(modifiers, jcutils::ModifierDeclaration::Constructor))
+        {
+            //TODO: Attach the conflicting modifier token site.
+            throw parser_exception(*conflict);
+        }
         methodDecl.modifiers = std::move(modifiers);
+
         if (checkSymbol(SymbolType::LAngleBracket))
         {
             methodDecl.typeParameters = parseGenericParameters();

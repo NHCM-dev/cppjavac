@@ -5,11 +5,16 @@
 #ifndef CPPJAVAC_PARSEREXCEPTION_H
 #define CPPJAVAC_PARSEREXCEPTION_H
 
-#endif //CPPJAVAC_PARSEREXCEPTION_H
+#include <cstdint>
+#include <optional>
+#include <stdexcept>
+#include <string>
+
+#include "main/lexer/LexerDef.h"
 
 namespace javac
 {
-    enum class ParserExceptionType : uint8_t
+    enum class ParserExceptionType : std::uint8_t
     {
         EXTENSION_VoidInGeneric,
 
@@ -50,6 +55,16 @@ namespace javac
         KeywordInClassLiteral,
         InvalidThrowsType,
         UnsupportedParameterDefault,
+
+        ModifierNotAllowedForClass,
+        ModifierNotAllowedForField,
+        ModifierNotAllowedForMethod,
+        ModifierNotAllowedForConstructor,
+        DuplicateModifier,
+        ConflictingAccessModifiers,
+        ConflictingClassModifiers,
+        ConflictingFieldModifiers,
+        ConflictingMethodModifiers
     };
 
     class parser_exception : public std::logic_error
@@ -77,3 +92,5 @@ namespace javac
         }
     };
 }
+
+#endif //CPPJAVAC_PARSEREXCEPTION_H

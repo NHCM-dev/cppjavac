@@ -6,6 +6,7 @@
 #define CPPJAVAC_PARSERUTIL_H
 #include <string_view>
 
+#include "ParserException.h"
 #include "ast/ASTDef.h"
 #include "main/core/def/JavaDef.h"
 
@@ -48,6 +49,31 @@ namespace jcutils
     bool canPermit(const javac::TypeNode& typeNode);
     // Check a type argument or wildcard bound. Allow primitives only for exact arguments.
     bool canGeneric(const javac::TypeNode& typeNode, bool allowPrimitive = false);
+
+
+    bool haveModifier(const std::vector<javac::ModifierFlag>& modifiers, javac::FlagType flag);
+
+    // === methods to detect whenever a vector of modifiers contains invalid elements for some types ===
+    // The determination is context less
+
+    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers, javac::LangLevel langLevel = javac::LangLevel::Eight);
+    bool modifiersAllowedForField(std::vector<javac::ModifierFlag>& modifiers);
+    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers);
+    bool modifiersAllowedForConstructor(std::vector<javac::ModifierFlag>& modifiers);
+
+    enum class ModifierDeclaration
+    {
+        Class,
+        Field,
+        Method,
+        Constructor
+    };
+
+    // Returns the first duplicate, or a conflict in the declaration's keyword modifiers.
+    [[nodiscard]] std::optional<javac::ParserExceptionType> findModifierConflict(
+        const std::vector<javac::ModifierFlag>& modifiers, ModifierDeclaration declaration);
+
+
 } // jcutils
 
 #endif //CPPJAVAC_PARSERUTIL_H

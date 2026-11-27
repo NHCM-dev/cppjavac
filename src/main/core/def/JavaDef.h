@@ -43,6 +43,7 @@ namespace javac
     enum class LangLevel : std::uint8_t
     {
         Eight = 8,
+        Nine = 9,
         Eleven = 11,
         Seventeen = 17,
         TwentyOne = 21,
