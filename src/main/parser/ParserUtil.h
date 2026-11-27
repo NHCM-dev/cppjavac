@@ -57,21 +57,22 @@ namespace jcutils
     {
         TopLevel,
         Member,
-        Interface, // Member class declared in an interface.
-        Annotation, // Member class declared in an annotation interface.
+        WithinInterface, // Member class declared in an interface.
+        WithinAnnotation, // Member class declared in an annotation interface.
         Local
     };
 
     [[nodiscard]] constexpr bool isInterfaceBody(ClassDeclContext context)
     {
-        return context == ClassDeclContext::Interface || context == ClassDeclContext::Annotation;
+        return context == ClassDeclContext::WithinInterface || context == ClassDeclContext::WithinAnnotation;
     }
 
     enum class MethodDeclContext
     {
         Normal,
-        Interface,
-        AnnotationElement
+        WithinAbstractClass,
+        WithinInterface, // method i
+        WithinAnnotation
     };
 
     bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers,

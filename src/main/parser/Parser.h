@@ -49,6 +49,10 @@ namespace javac
         [[nodiscard]]
         bool canBeAnnotation() const;
 
+        // Return true if current lang level is equal ot greater than the target lang level
+        [[nodiscard]]
+        bool langLevelMeet(LangLevel targetLangLevel) const;
+
         /**
          * Read token at X offset
          * Invoke without arg to get current token
@@ -146,22 +150,35 @@ namespace javac
          * @return the constructed package declaration
          */
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
+
         ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {},
             jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel);
+        /**
+         * Try parse class members within class
+         * @throws parser_exception if failed to parse any class member
+         * @param className name of the enclosing class
+         * @param classContext current class context provided to member parsing
+         * @param methodContext context for methods declared in the class body
+         * @return A pointer of the member declaration, Can be: ClassDecl, FieldDecl, MethodDecl, ConstructorDecl,
+         * InitializerDecl, or return nullptr at the closing brace
+         */
+        std::unique_ptr<Decl> parseNormalClassMember(std::u16string_view className,
+            jcutils::ClassDeclContext classContext, jcutils::MethodDeclContext methodContext,
+            std::optional<ReceiverParameter> receiverParameter = std::nullopt);
 
         std::vector<ModifierFlag> parseModifierFlags();
 
         // The context identifies the body containing the declaration.
-        FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers = {},
-            jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel);
-
+        FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context,
+            TypeNode type, const Token& firstName);
 
         // Method declaration
-        MethodDecl parseMethodDecl(std::vector<ModifierFlag> modifiers = {},
-            jcutils::MethodDeclContext context = jcutils::MethodDeclContext::Normal,
-            std::optional<ReceiverParameter> receiverParameter = std::nullopt);
-        ConstructorDecl parseConstructorDecl(std::vector<ModifierFlag> modifiers = {},
-            jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel,
+        std::unique_ptr<InitializerDecl> parseInitializerDecl();
+        MethodDecl parseMethodDecl(std::vector<ModifierFlag> modifiers, jcutils::MethodDeclContext context,
+            std::vector<GenericParameter> typeParameters, TypeNode returnType, const Token& returnTypeStart,
+            const Token& name, std::optional<ReceiverParameter> receiverParameter = std::nullopt);
+        ConstructorDecl parseConstructorDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context,
+            std::vector<GenericParameter> typeParameters, const Token& name,
             std::optional<ReceiverParameter> receiverParameter = std::nullopt);
         /**
          * Parse parameters declaration in the parenthesis of a method declaration

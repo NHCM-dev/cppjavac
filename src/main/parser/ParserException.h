@@ -53,7 +53,6 @@ namespace javac
 
 
         GenericInClassLiteral,
-        UnsupportedParameterDefault,
 
         ModifierNotAllowedForClass,
         ModifierNotAllowedForField,
@@ -64,19 +63,29 @@ namespace javac
         ConflictingClassModifiers,
         ConflictingFieldModifiers,
         ConflictingMethodModifiers,
+        AbstractMethodInNonAbstractClass,
 
         ConstructorNotAllowedInContext,
 
         ReceiverParameterNotAllowed,
 
         TypeParametersNotAllowedForAnnotationElement,
+        TypeParametersNotAllowedForField,
 
         InvalidNumberLiteral,
         InvalidExactGeneric,
         InvalidThrowsType,
         InvalidAnnotationElementType,
+        InvalidClassMember,
 
-        InterfaceFieldRequiresInitializer
+        UnsupportedParameterDefault,
+        UnsupportedMemberTypeDeclaration,
+        UnsupportedFieldInitializer,
+
+        InterfaceFieldRequiresInitializer,
+        ConstructorNameMismatch,
+
+        StaticInitializerInMemberClass,
     };
 
     class parser_exception : public std::logic_error

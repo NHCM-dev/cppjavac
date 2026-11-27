@@ -264,7 +264,7 @@ namespace javac
     {
         expectKeyword(CLASS);
 
-        ClassDecl decl;
+        ClassDecl classDecl;
 
         if (!jcutils::modifiersAllowedForClass(modifiers, sourceLangLevel, context))
         {
@@ -276,20 +276,20 @@ namespace javac
             //TODO: Attach the conflicting modifier token site.
             throw parser_exception(*conflict);
         }
-        decl.modifiers = std::move(modifiers);
-        decl.name = expectIdentifier().content;
+        classDecl.modifiers = std::move(modifiers);
+        classDecl.name = expectIdentifier().content;
 
         if (checkSymbol(SymbolType::LAngleBracket))
         {
             std::vector<GenericParameter> generics = parseGenericParameters();
-            decl.typeParameters = std::move(generics);
+            classDecl.typeParameters = std::move(generics);
         }
 
         if (matchKeyword(EXTENDS))
         {
             const Token& token = peek();
-            decl.superClass = parseTypeNode();
-            if (!jcutils::canExtImplTo(*decl.superClass))
+            classDecl.superClass = parseTypeNode();
+            if (!jcutils::canExtImplTo(*classDecl.superClass))
             {
                 throw parser_exception(ParserExceptionType::CannotExtendsTo, token);
             }
@@ -304,7 +304,7 @@ namespace javac
                 {
                     throw parser_exception(ParserExceptionType::CannotImplementsTo, token);
                 }
-                decl.interfaces.push_back(std::move(type));
+                classDecl.interfaces.push_back(std::move(type));
             } while (matchSymbol(SymbolType::Comma));
         }
         if (matchKeyword(PERMITS))
@@ -317,17 +317,132 @@ namespace javac
                 {
                     throw parser_exception(ParserExceptionType::CannotPermitsTo, token);
                 }
-                decl.permittedTypes.push_back(std::move(type));
+                classDecl.permittedTypes.push_back(std::move(type));
             } while (matchSymbol(SymbolType::Comma));
         }
 
         expectSymbol(SymbolType::LBrace);
 
-        //TODO: parse methods and fields
+        // A normal class has its own class body even when declared inside an interface.
+        const jcutils::ClassDeclContext bodyContext =
+            jcutils::isInterfaceBody(context) ? jcutils::ClassDeclContext::Member : context;
+        const auto methodContext = jcutils::haveModifier(classDecl.modifiers, FlagType::Abstract)
+            ? jcutils::MethodDeclContext::WithinAbstractClass : jcutils::MethodDeclContext::Normal;
+
+        while (std::unique_ptr<Decl> member = parseNormalClassMember(classDecl.name, bodyContext, methodContext))
+        {
+            classDecl.members.push_back(std::move(member));
+        }
 
         expectSymbol(SymbolType::RBrace);
 
-        return decl;
+        return classDecl;
+    }
+
+    std::unique_ptr<Decl> Parser::parseNormalClassMember(std::u16string_view className,
+        jcutils::ClassDeclContext classContext, jcutils::MethodDeclContext methodContext,
+        std::optional<ReceiverParameter> receiverParameter)
+    {
+        while (matchSymbol(SymbolType::Semicolon)){}
+
+        // Nothing passed
+        if (checkSymbol(SymbolType::RBrace))
+        {
+            return nullptr;
+        }
+        
+        // Try parse initializer such as static block
+        bool isStatic = checkKeyword(STATIC) && peek(1).symbol == SymbolType::LBrace;
+        if (isStatic)
+        {
+            if (classContext != jcutils::ClassDeclContext::TopLevel)
+            {
+                throw parser_exception(ParserExceptionType::StaticInitializerInMemberClass, peek());
+            }
+            return parseInitializerDecl();
+        }
+        if (checkSymbol(SymbolType::LBrace))
+        {
+            return parseInitializerDecl();
+        }
+
+        // Collect annotations
+        // Parse modifier flags
+        std::vector<ModifierFlag> modifiers = parseModifierFlags();
+
+        // Check for class
+        if (checkKeyword(CLASS))
+        {
+            return std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers), jcutils::ClassDeclContext::Member));
+        }
+        //TODO: Check for interface
+        //TODO: Check for enum
+        //TODO: Check for record (Java17+)
+        if (checkKeyword(INTERFACE) || checkKeyword(ENUM)
+            || (checkSymbol(SymbolType::AtSign) && peek(1).keyword == INTERFACE)
+            || (langLevelMeet(LangLevel::Seventeen) && checkKeyword(RECORD)))
+        {
+            //TODO: Parse nested interfaces, annotation types, enums and records.
+            throw parser_exception(ParserExceptionType::UnsupportedMemberTypeDeclaration, peek());
+        }
+
+        std::vector<GenericParameter> typeParameters;
+        const Token& prefixStart = peek();
+        if (checkSymbol(SymbolType::LAngleBracket))
+        {
+            typeParameters = parseGenericParameters();
+        }
+        // Check for constructor
+        if (checkIdentifier() && peek(1).symbol == SymbolType::LParen)
+        {
+            const Token& name = expectIdentifier();
+            if (name.content != className)
+            {
+                throw parser_exception(ParserExceptionType::ConstructorNameMismatch, name);
+            }
+            return std::make_unique<ConstructorDecl>(parseConstructorDecl(std::move(modifiers), classContext,
+                std::move(typeParameters), name, std::move(receiverParameter)));
+        }
+
+        // Check for field and method
+        // parseTypeNode() handles primitive and reference types.
+        const Token& typeStart = peek();
+        TypeNode type = parseTypeNode();
+        const Token& name = expectIdentifier();
+
+        // '(' means is a method
+        if (checkSymbol(SymbolType::LParen))
+        {
+            return std::make_unique<MethodDecl>(
+                parseMethodDecl(std::move(modifiers),
+                    methodContext,
+                    std::move(typeParameters),
+                    std::move(type),
+                    typeStart,
+                    name,
+                    std::move(receiverParameter)));
+        }
+
+        if (!checkSymbol(SymbolType::LBracket)
+            && !canBeAnnotation()
+            && !checkSymbol(SymbolType::Assign)
+            && !checkSymbol(SymbolType::Comma)
+            && !checkSymbol(SymbolType::Semicolon))
+        {
+            throw parser_exception(ParserExceptionType::InvalidClassMember, peek());
+        }
+
+        // <T> void method(), field declaration cannot start with <
+        if (!typeParameters.empty())
+        {
+            throw parser_exception(ParserExceptionType::TypeParametersNotAllowedForField, prefixStart);
+        }
+        // void method(), field declaration cannot have type void
+        if (type.objectType == ObjectType::Void)
+        {
+            throw parser_exception(ParserExceptionType::VoidAsTypeSpecification, typeStart);
+        }
+        return std::make_unique<FieldDecl>(parseFieldDecl(std::move(modifiers), classContext, std::move(type), name));
     }
 
     std::vector<ModifierFlag> Parser::parseModifierFlags()
@@ -380,7 +495,8 @@ namespace javac
         return vectors;
     }
 
-    FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context)
+    FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context,
+        TypeNode type, const Token& firstName)
     {
         FieldDecl fieldDecl;
         if (!jcutils::modifiersAllowedForField(modifiers, context))
@@ -395,43 +511,53 @@ namespace javac
         }
         fieldDecl.modifiers = std::move(modifiers);
 
-        const Token& token = peek();
-        fieldDecl.type = parseTypeNode();
+        fieldDecl.type = std::move(type);
 
-        if (fieldDecl.type.objectType == ObjectType::Void)
-        {
-            throw parser_exception(ParserExceptionType::VoidAsTypeSpecification, token);
-        }
-
-        do
+        const Token* name = &firstName;
+        while (true)
         {
             VariableDeclarator variableDeclarator;
-
-            variableDeclarator.name = expectIdentifier().content;
-            std::vector<ArrayDimension> arrayDimensions = parseArrayDimension();
-            if (!arrayDimensions.empty())
-            {
-                variableDeclarator.dimensions = std::move(arrayDimensions);
-            }
-            if (matchSymbol(SymbolType::Assign))
+            variableDeclarator.name = name->content;
+            variableDeclarator.dimensions = parseArrayDimension();
+            if (checkSymbol(SymbolType::Assign))
             {
                 //TODO: implement parse initializer
-                variableDeclarator.initializer = nullptr;
+                throw parser_exception(ParserExceptionType::UnsupportedFieldInitializer, peek());
             }
-            else if (jcutils::isInterfaceBody(context))
+            if (jcutils::isInterfaceBody(context))
             {
                 throw parser_exception(ParserExceptionType::InterfaceFieldRequiresInitializer, peek());
             }
             fieldDecl.declarators.push_back(std::move(variableDeclarator));
-        } while (matchSymbol(SymbolType::Comma));
+            if (!matchSymbol(SymbolType::Comma))
+            {
+                break;
+            }
+            name = &expectIdentifier();
+        }
 
         expectSymbol(SymbolType::Semicolon);
 
         return fieldDecl;
     }
 
+    std::unique_ptr<InitializerDecl> Parser::parseInitializerDecl()
+    {
+        InitializerDecl decl;
+        if (matchKeyword(STATIC))
+        {
+            decl.isStatic = true;
+            decl.body = std::make_unique<BlockStatement>(parseMethodBody());
+        } else
+        {
+            decl.body = std::make_unique<BlockStatement>(parseMethodBody());
+        }
+        return std::make_unique<InitializerDecl>(std::move(decl));
+    }
+
     MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers,
-        jcutils::MethodDeclContext context,
+        jcutils::MethodDeclContext context, std::vector<GenericParameter> typeParameters,
+        TypeNode returnType, const Token& returnTypeStart, const Token& name,
         std::optional<ReceiverParameter> receiverParameter)
     {
         MethodDecl methodDecl;
@@ -445,7 +571,14 @@ namespace javac
             //TODO: Attach the conflicting modifier token site.
             throw parser_exception(*conflict);
         }
-        const bool annotationElement = context == jcutils::MethodDeclContext::AnnotationElement;
+        const bool isAbstract = jcutils::haveModifier(modifiers, FlagType::Abstract);
+        if (isAbstract && context == jcutils::MethodDeclContext::Normal)
+        {
+            //TODO: Attach the abstract modifier token site.
+            throw parser_exception(ParserExceptionType::AbstractMethodInNonAbstractClass);
+        }
+
+        const bool annotationElement = context == jcutils::MethodDeclContext::WithinAnnotation;
         const bool isStatic = jcutils::haveModifier(modifiers, FlagType::Static);
         if (receiverParameter && (annotationElement || isStatic))
         {
@@ -453,31 +586,22 @@ namespace javac
             throw parser_exception(ParserExceptionType::ReceiverParameterNotAllowed);
         }
 
-        const bool needsBody = context == jcutils::MethodDeclContext::Normal
-            ? !jcutils::haveModifier(modifiers, FlagType::Abstract) && !jcutils::haveModifier(modifiers, FlagType::Native)
-            : context == jcutils::MethodDeclContext::Interface
+        const bool classMethod = context == jcutils::MethodDeclContext::Normal
+            || context == jcutils::MethodDeclContext::WithinAbstractClass;
+        const bool needsBody = classMethod
+            ? !isAbstract && !jcutils::haveModifier(modifiers, FlagType::Native)
+            : context == jcutils::MethodDeclContext::WithinInterface
                 && (isStatic || jcutils::haveModifier(modifiers, FlagType::Default)
                     || jcutils::haveModifier(modifiers, FlagType::Private));
         methodDecl.modifiers = std::move(modifiers);
-        if (checkSymbol(SymbolType::LAngleBracket))
+        if (annotationElement && !typeParameters.empty())
         {
-            if (annotationElement)
-            {
-                throw parser_exception(ParserExceptionType::TypeParametersNotAllowedForAnnotationElement, peek());
-            }
-            methodDecl.typeParameters = parseGenericParameters();
+            throw parser_exception(ParserExceptionType::TypeParametersNotAllowedForAnnotationElement, returnTypeStart);
         }
-
-        std::vector<Annotation> retAnnotations;
-        if (canBeAnnotation())
-        {
-            retAnnotations = parseAnnotations();
-        }
-        const Token& returnTypeStart = peek();
-        methodDecl.returnType = parseTypeNode(std::move(retAnnotations));
-
+        methodDecl.typeParameters = std::move(typeParameters);
+        methodDecl.returnType = std::move(returnType);
         methodDecl.receiverParam = std::move(receiverParameter);
-        methodDecl.name = expectIdentifier().content;
+        methodDecl.name = name.content;
 
         expectSymbol(SymbolType::LParen);
         if (annotationElement)
@@ -537,12 +661,12 @@ namespace javac
     }
 
     ConstructorDecl Parser::parseConstructorDecl(std::vector<ModifierFlag> modifiers,
-        jcutils::ClassDeclContext context,
+        jcutils::ClassDeclContext context, std::vector<GenericParameter> typeParameters, const Token& name,
         std::optional<ReceiverParameter> receiverParameter)
     {
         if (jcutils::isInterfaceBody(context))
         {
-            throw parser_exception(ParserExceptionType::ConstructorNotAllowedInContext, peek());
+            throw parser_exception(ParserExceptionType::ConstructorNotAllowedInContext, name);
         }
 
         ConstructorDecl methodDecl;
@@ -558,13 +682,9 @@ namespace javac
         }
         methodDecl.modifiers = std::move(modifiers);
 
-        if (checkSymbol(SymbolType::LAngleBracket))
-        {
-            methodDecl.typeParameters = parseGenericParameters();
-        }
-
+        methodDecl.typeParameters = std::move(typeParameters);
         methodDecl.receiverParam = std::move(receiverParameter);
-        methodDecl.name = expectIdentifier().content;
+        methodDecl.name = name.content;
 
         expectSymbol(SymbolType::LParen);
         methodDecl.parameters = parseMethodParameters();

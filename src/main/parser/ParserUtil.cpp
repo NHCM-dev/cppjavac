@@ -216,11 +216,12 @@ namespace jcutils
             switch (context)
             {
             case MethodDeclContext::Normal:
+            case MethodDeclContext::WithinAbstractClass:
                 return contains(normal, flag);
-            case MethodDeclContext::Interface:
+            case MethodDeclContext::WithinInterface:
                 return flag == Public || flag == Abstract || flag == Default || flag == Static || flag == Strictfp
                     || (flag == Private && langLevel >= javac::LangLevel::Nine);
-            case MethodDeclContext::AnnotationElement:
+            case MethodDeclContext::WithinAnnotation:
                 return flag == Public || flag == Abstract;
             }
             return false;

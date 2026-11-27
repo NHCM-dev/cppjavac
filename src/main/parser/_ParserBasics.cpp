@@ -40,6 +40,11 @@ namespace javac
         return checkSymbol(SymbolType::AtSign) && peek(1).keyword != INTERFACE;
     }
 
+    bool Parser::langLevelMeet(LangLevel targetLangLevel) const
+    {
+        return static_cast<uint8_t>(sourceLangLevel) >= static_cast<uint8_t>(targetLangLevel);
+    }
+
     const Token& Parser::peek(std::size_t offset) const
     {
         if (offset == 0 && typeCloseRemainder && typeCloseRemainder->first == tokenPointer)
