@@ -259,10 +259,10 @@ namespace javac
         if (matchKeyword(STATIC))
         {
             decl.isStatic = true;
-            decl.body = makeUniq<BlockStatement>(parseBlock());
+            decl.body = parseBlock();
         } else
         {
-            decl.body = makeUniq<BlockStatement>(parseBlock());
+            decl.body = parseBlock();
         }
         return makeUniq<InitializerDecl>(std::move(decl));
     }
@@ -360,7 +360,7 @@ namespace javac
 
         if (needsBody)
         {
-            methodDecl.body = makeUniq<BlockStatement>(parseBlock());
+            methodDecl.body = parseBlock();
         }
         else
         {
@@ -411,7 +411,7 @@ namespace javac
             } while (matchSymbol(SymbolType::Comma));
         }
 
-        methodDecl.body = makeUniq<BlockStatement>(parseBlock());
+        methodDecl.body = parseBlock();
 
         return methodDecl;
     }

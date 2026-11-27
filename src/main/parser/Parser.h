@@ -250,13 +250,13 @@ namespace javac
          * @throw parser_exception if the block is invalid
          * @return parsed block statement
          */
-        BlockStatement parseBlock();
+        Uptr<BlockStatement> parseBlock();
         /**
        * Parse a single code statement
        * @throw parser_exception if the statement is invalid
        * @return parsed statement
        */
-        Uptr<Statement> parseStatement(bool allowBlock = true);
+        Uptr<Statement> parseStatement(jcutils::StatementContext context);
         Uptr<ReturnStatement> parseReturnStatement();
         Uptr<IfStatement> parseIfStatement();
         Uptr<SwitchStatement> parseSwitchStatement();
@@ -270,7 +270,11 @@ namespace javac
         Uptr<BreakStatement> parseBreakStatement();
 
         Uptr<SynchronizedStatement> parseSynchronizedStatement();
+
         Uptr<TryStatement> parseTryStatement();
+        TryResource parseTryResource();
+
+        Uptr<DeclStatement> parseVarDeclStatement();
 
         // ======
 
@@ -315,6 +319,7 @@ namespace javac
          */
         std::vector<GenericParameter> parseGenericParameters();
 
+        CatchClause parseCatchClause();
 
 
 

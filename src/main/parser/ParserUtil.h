@@ -103,6 +103,12 @@ namespace jcutils
     [[nodiscard]] std::optional<ModifierConflict> findModifierConflict(
         const std::vector<javac::ModifierFlag>& modifiers, ModifierDeclaration declaration);
 
+    enum class StatementContext
+    {
+        Embedded,
+        Block
+    };
+
 } // jcutils
 
 #endif //CPPJAVAC_PARSERUTIL_H

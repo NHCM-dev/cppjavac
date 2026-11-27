@@ -6,25 +6,25 @@
 
 namespace javac
 {
-    BlockStatement Parser::parseBlock()
+    Uptr<BlockStatement> Parser::parseBlock()
     {
-        BlockStatement blockStatement;
-        blockStatement.range = expectSymbol(SymbolType::LBrace).range;
+        Uptr<BlockStatement> blockStatement = makeUniq<BlockStatement>();
+        blockStatement->range = expectSymbol(SymbolType::LBrace).range;
 
         while (!isAtEnd() && !checkSymbol(SymbolType::RBrace))
         {
-            blockStatement.statements.push_back(parseStatement(true));
+            blockStatement->statements.push_back(parseStatement(jcutils::StatementContext::Block));
         }
 
-        blockStatement.range->end = expectSymbol(SymbolType::RBrace).range.end;
+        blockStatement->range->end = expectSymbol(SymbolType::RBrace).range.end;
         return blockStatement;
     }
 
-    Uptr<Statement> Parser::parseStatement(bool allowBlock)
+    Uptr<Statement> Parser::parseStatement([[maybe_unused]] jcutils::StatementContext context)
     {
-        if (allowBlock && checkSymbol(SymbolType::LBrace))
+        if (checkSymbol(SymbolType::LBrace))
         {
-            return makeUniq<BlockStatement>(parseBlock());
+            return parseBlock();
         }
 
         if (checkSymbol(SymbolType::Semicolon))
@@ -33,46 +33,16 @@ namespace javac
             statement->range = advance().range;
             return statement;
         }
-        if (checkKeyword(THROW))
-        {
-            return parseThrowStatement();
-        }
-        if (checkKeyword(RETURN))
-        {
-            return parseReturnStatement();
-        }
-        if (checkKeyword(IF))
-        {
-            return parseIfStatement();
-        }
-        if (checkKeyword(SWITCH))
-        {
-            return parseSwitchStatement();
-        }
-        if (checkKeyword(CONTINUE))
-        {
-            return parseContinueStatement();
-        }
-        if (checkKeyword(GOTO))
-        {
-            return parseGotoStatement();
-        }
-        if (checkKeyword(ASSERT))
-        {
-            return parseAssertStatement();
-        }
-        if (checkKeyword(BREAK))
-        {
-            return parseBreakStatement();
-        }
-        if (checkKeyword(SYNCHRONIZED))
-        {
-            return parseSynchronizedStatement();
-        }
-        if (checkKeyword(TRY))
-        {
-            return parseTryStatement();
-        }
+        if (checkKeyword(THROW))            return parseThrowStatement();
+        if (checkKeyword(RETURN))           return parseReturnStatement();
+        if (checkKeyword(IF))               return parseIfStatement();
+        if (checkKeyword(SWITCH))           return parseSwitchStatement();
+        if (checkKeyword(CONTINUE))         return parseContinueStatement();
+        if (checkKeyword(GOTO))             return parseGotoStatement();
+        if (checkKeyword(ASSERT))           return parseAssertStatement();
+        if (checkKeyword(BREAK))            return parseBreakStatement();
+        if (checkKeyword(SYNCHRONIZED))     return parseSynchronizedStatement();
+        if (checkKeyword(TRY))              return parseTryStatement();
 
         if (checkIdentifier() && peek(1).symbol == SymbolType::Colon)
         {
@@ -85,6 +55,7 @@ namespace javac
             pendingAnnotations = parseAnnotations();
         }
 
+        //TODO: Parse local declarations only in StatementContext::Block.
         //TODO: Implement rest of the statement parsing
         throw parser_exception(ParserExceptionType::UnsupportedStatement, peek());
     }
@@ -115,10 +86,10 @@ namespace javac
         statement->condition = parseValue();
         expectSymbol(SymbolType::RParen);
 
-        statement->thenBranch = parseStatement();
+        statement->thenBranch = parseStatement(jcutils::StatementContext::Embedded);
         if (matchKeyword(ELSE))
         {
-            statement->elseBranch = parseStatement();
+            statement->elseBranch = parseStatement(jcutils::StatementContext::Embedded);
         }
 
         const Uptr<Statement>& lastBranch = statement->elseBranch
@@ -176,14 +147,14 @@ namespace javac
             {
                 while (!isAtEnd() && !checkSymbol(SymbolType::RBrace) && !atLabel())
                 {
-                    auto child = parseStatement();
+                    auto child = parseStatement(jcutils::StatementContext::Block);
                     branch.range->end = child->range->end;
                     branch.statements.push_back(std::move(child));
                 }
             }
             else if (checkSymbol(SymbolType::LBrace))
             {
-                branch.ruleStatement = makeUniq<BlockStatement>(parseBlock());
+                branch.ruleStatement = parseBlock();
                 branch.range->end = branch.ruleStatement->range->end;
             }
             else if (checkKeyword(THROW))
@@ -223,7 +194,7 @@ namespace javac
         statement->label = label.content;
 
         expectSymbol(SymbolType::Colon);
-        statement->statement = parseStatement(true);
+        statement->statement = parseStatement(jcutils::StatementContext::Embedded);
         statement->range->end = statement->statement->range->end;
 
         return statement;
@@ -310,7 +281,7 @@ namespace javac
         statement->monitorExpr = parseValue();
         expectSymbol(SymbolType::RParen);
 
-        statement->body = makeUniq<BlockStatement>(parseBlock());
+        statement->body = parseBlock();
         statement->range->end = statement->body->range->end;
 
         return statement;
@@ -319,6 +290,46 @@ namespace javac
     Uptr<TryStatement> Parser::parseTryStatement()
     {
         Uptr<TryStatement> statement = makeUniq<TryStatement>();
+        statement->range = expectKeyword(TRY).range;
+
+        if (matchSymbol(SymbolType::LParen))
+        {
+            do
+            {
+                statement->resources.push_back(parseTryResource());
+            } while (matchSymbol(SymbolType::Semicolon) && !checkSymbol(SymbolType::RParen));
+            expectSymbol(SymbolType::RParen);
+        }
+
+        statement->tryBlock = parseBlock();
+        statement->range->end = statement->tryBlock->range->end;
+
+        while (checkKeyword(CATCH))
+        {
+            statement->catches.push_back(parseCatchClause());
+            statement->range->end = statement->catches.back().range->end;
+        }
+
+        if (matchKeyword(FINALLY))
+        {
+            statement->finallyBlock = parseBlock();
+            statement->range->end = statement->finallyBlock->range->end;
+        }
+        else if (statement->resources.empty() && statement->catches.empty())
+        {
+            throw parser_exception(ParserExceptionType::ExpectCatchOrFinally, peek());
+        }
+
+        return statement;
+    }
+
+    TryResource Parser::parseTryResource()
+    {
         //TODO: implement
+    }
+    Uptr<DeclStatement> Parser::parseVarDeclStatement()
+    {
+        //TODO: Parse a resource declaration and leave the separator to the caller.
+        throw parser_exception(ParserExceptionType::UnsupportedStatement, peek());
     }
 } // javac

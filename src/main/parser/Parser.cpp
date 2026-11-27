@@ -377,4 +377,51 @@ namespace javac
         expectTypeClose();
         return parameters;
     }
+
+    CatchClause Parser::parseCatchClause()
+    {
+        CatchClause catchClause;
+
+        catchClause.range = expectKeyword(CATCH).range;
+        expectSymbol(SymbolType::LParen);
+
+        catchClause.modifiers = parseModifierFlags();
+        bool seenFinal = false;
+        for (const auto& modifier : catchClause.modifiers)
+        {
+            if (!modifier.flagType)
+            {
+                continue;
+            }
+            if (modifier.flagType != FlagType::Final)
+            {
+                throw parser_exception(ParserExceptionType::ModifierNotAllowedForCatchParameter, modifier.range);
+            }
+            if (seenFinal)
+            {
+                throw parser_exception(ParserExceptionType::DuplicateModifier, modifier.range);
+            }
+            seenFinal = true;
+        }
+
+        do
+        {
+            const Token& start = peek();
+            TypeNode type = parseTypeNode();
+            if (type.objectType != ObjectType::Class)
+            {
+                throw parser_exception(ParserExceptionType::ExpectThrowableType, start);
+            }
+            catchClause.exceptionTypes.push_back(std::move(type));
+        } while (matchSymbol(SymbolType::Pipe));
+
+        catchClause.name = expectIdentifier().content;
+
+        expectSymbol(SymbolType::RParen);
+
+        catchClause.body = parseBlock();
+        catchClause.range->end = catchClause.body->range->end;
+
+        return catchClause;
+    }
 } // javac

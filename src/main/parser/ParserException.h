@@ -26,6 +26,8 @@ namespace javac
         ExpectClassLiteral,
         ExpectColon,
         ExpectColonOrArrow,
+        ExpectVarDeclarationOrVarReference,
+        ExpectThrowableType,
 
         MultipleExtends,
         MultipleImplements,
@@ -87,6 +89,8 @@ namespace javac
         UnsupportedFieldInitializer,
         UnsupportedStatement,
         UnsupportedExpression,
+        ModifierNotAllowedForCatchParameter,
+        ExpectCatchOrFinally,
         UnsupportedElementExpression,
 
         InterfaceFieldRequiresInitializer,
