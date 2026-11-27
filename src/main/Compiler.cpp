@@ -6,10 +6,12 @@
 
 #include <cstdio>
 #include <stdexcept>
+#include <utility>
 
 #include "cppjavac.h"
 #include "core/JavacConfig.h"
 #include "lexer/Lexer.h"
+#include "parser/Parser.h"
 #include "tool/EncodingTool.h"
 #include "tool/FileIoTool.h"
 #include "util/ExceptionUtil.h"
@@ -25,67 +27,6 @@ namespace javac
         compileRtData = new CompileRtData();
     }
 
-    void Compiler::printTerminate()
-    {
-        jcutils::printErrorCustom("Compiler terminated. " +
-                std::to_string(compileRtData->errors.size()) + " errors occurred, " +
-                std::to_string(compileRtData->warnings.size()) + " warnings generated.");
-    }
-
-    void Compiler::noticeError(const std::string& error, std::string_view owner)
-    {
-        compileRtData->errors.push_back(error);
-        jcutils::printErrorCustom(error, owner);
-    }
-    void Compiler::noticeWarning(const std::string& warning)
-    {
-        if (!compilerConfig.nowarn)
-        {
-            compileRtData->warnings.push_back(warning);
-            jcutils::printWarningCustom(warning);
-        }
-    }
-
-    bool Compiler::addParentPath(const Path& sourcePath, const Path& parentPath)
-    {
-        return compileRtData->addParentPath(sourcePath, parentPath);
-    }
-
-    Path* Compiler::getParentPath(const Path& sourceFilePath)
-    {
-        return compileRtData->getParentPath(sourceFilePath);
-    }
-
-    Path& Compiler::outputPath()
-    {
-        return compilerConfig.outputDir;
-    }
-
-    TextEncoding& Compiler::encoding()
-    {
-        return compilerConfig.encoding;
-    }
-
-    bool Compiler::putFileToWrite(const Path& filePath, const ByteArray& data)
-    {
-        return compileRtData->filesToWrite.try_emplace(fs::absolute(filePath), data).second;
-    }
-
-    Path Compiler::getWritePath(const Path& filePath)
-    {
-        Path writePath = jcutils::joinAbsolutePath(outputPath(), filePath.filename());
-        Path* parentPath = getParentPath(filePath);
-        if (parentPath)
-        {
-            writePath = jcutils::joinAbsolutePath(outputPath(), jcutils::getRelativePath(filePath, *parentPath));
-        }
-        return writePath;
-    }
-    Path Compiler::getWritePath(const Path& filePath, const std::string& newExtension)
-    {
-        return jcutils::changeExtension(getWritePath(filePath), newExtension);
-    }
-
     bool Compiler::compile()
     {
         jcutils::printErrorCustom("Compile is not implemented");
@@ -99,7 +40,7 @@ namespace javac
 
     bool Compiler::lex()
     {
-        bool hasErrors = false;
+        bool hasError = false;
         for (const auto& file : compileRtData->filesToCompile)
         {
             const std::string displayPath = file.string();
@@ -119,23 +60,24 @@ namespace javac
             }
             catch (const std::invalid_argument& error)
             {
-                noticeError(displayPath + ": " + error.what());
-                hasErrors = true;
+                noticeError(displayPath + ": " + error.what(), LEXER);
+                hasError = true;
                 continue;
             }
             catch (const std::ios_base::failure& error)
             {
                 noticeError(error.what(), LEXER);
-                hasErrors = true;
+                hasError = true;
                 continue;
             }
 
-            hasErrors |= reportInvalidTokens(file, sourceDisplay, tokenStream);
+            hasError |= reportInvalidTokens(file, sourceDisplay, tokenStream);
 
+            compileRtData->sourcesDisplay.emplace(file, std::move(sourceDisplay));
             compileRtData->tokenStreams.emplace(file, std::move(tokenStream));
         }
 
-        return !hasErrors;
+        return !hasError;
     }
 
     bool Compiler::reportInvalidTokens(const Path& file, std::u16string_view source, const TokenStream& tokens)
@@ -150,116 +92,52 @@ namespace javac
         return !tokens.invalidTokens.empty();
     }
 
-    bool Compiler::lexExperimental()
+    bool Compiler::parse()
     {
-        jcutils::printWarningCustom("This lex feature is currently experimental", LEXER);
-        bool hasErrors = false;
-        for (const auto& file : compileRtData->filesToCompile)
+        bool hasError = false;
+        for (auto& [file, tokenStream] : compileRtData->tokenStreams)
         {
+            if (!tokenStream.invalidTokens.empty())
+            {
+                hasError = true;
+                continue;
+            }
+
             const std::string displayPath = file.string();
 
             if (verbose())
             {
-                jcutils::printDebugCustom("Lexing file \"" + displayPath + "\"", LEXER);
+                jcutils::printDebugCustom("Parsing file \"" + displayPath + "\"", PARSER);
             }
 
-            std::u16string sourceDisplay;
-            TokenStream tokenStream;
+            Parser parser = {std::move(tokenStream), file, compilerConfig.extensions, compilerConfig.sourceLangLevel};
+
+            ParserResult result;
             try
             {
-                sourceDisplay = EncodingTool::decodeToUtf16(FileIOTool::readUtf8(file), encoding());
-                Lexer lexer(sourceDisplay, compilerConfig.extensions, compilerConfig.sourceLangLevel);
-                tokenStream = lexer.lex(true, true);
-            }
-            catch (const std::invalid_argument& error)
+                result = parser.parse();
+            } catch (const parser_exception& error)
             {
-                noticeError(displayPath + ": " + error.what(), LEXER);
-                hasErrors = true;
-                continue;
+                result.exceptions.push_back(error);
             }
-            catch (const std::ios_base::failure& error)
-            {
-                noticeError(error.what(), LEXER);
-                hasErrors = true;
-                continue;
-            }
-            hasErrors |= reportInvalidTokens(file, sourceDisplay, tokenStream);
-            std::string tokenDisplay {};
 
-            for (const auto& token : tokenStream.tokens)
-            {
-                if (token.tokenType != TokenType::Whitespace && token.tokenType != TokenType::NewLine)
-                {
-                    constexpr std::string_view typeNames[] = {
-                        "EndOfFile", "Invalid", "Identifier", "Keyword",
-                        "IntegerLiteral", "FloatLiteral", "CharacterLiteral", "StringLiteral",
-                        "Symbol", "LineComment", "BlockComment", "JavadocComment",
-                        "NewLine", "Whitespace", "BooleanLiteral", "NullLiteral"
-                    };
+            hasError |= reportParsingErrorExperimental(file, compileRtData->sourcesDisplay.at(file), result);
 
-                    std::string content;
-                    for (const char16_t ch : token.content)
-                    {
-                        switch (ch)
-                        {
-                            case u'\n': content += "\\n"; break;
-                            case u'\r': content += "\\r"; break;
-                            case u'\t': content += "\\t"; break;
-                            case u'"': content += "\\\""; break;
-                            case u'\\': content += "\\\\"; break;
-                            default:
-                                if (ch >= u' ' && ch <= u'~')
-                                {
-                                    content += static_cast<char>(ch);
-                                }
-                                else
-                                {
-                                    char escape[7];
-                                    std::snprintf(escape, sizeof(escape), "\\u%04X", static_cast<unsigned>(ch));
-                                    content += escape;
-                                }
-                        }
-                    }
-                    const std::string position = sourceLocationToString(token.range.begin);
-                    std::string output = position + ' ';
-                    output += typeNames[static_cast<std::size_t>(token.tokenType)];
-                    output += " \"" + content + '"';
-                    if (token.invalidReason)
-                    {
-                        output += " (";
-                        output += invalidTokenStr(*token.invalidReason);
-                        output += ')';
-                    }
-                    tokenDisplay += output + "\n";
-                }
-            }
-            sourceDisplay += u"\n\n===Lexer tokens===\n\n";
-            sourceDisplay += EncodingTool::utf8ToUtf16(tokenDisplay);
-
-            putFileToWrite(getWritePath(file, "javal"), std::vector(
-            reinterpret_cast<const std::byte*>(sourceDisplay.data()),
-            reinterpret_cast<const std::byte*>(sourceDisplay.data() + sourceDisplay.size())
-            ));
+            compileRtData->parserResults.emplace(file, std::move(result));
         }
-
-        return !hasErrors;
-    }
-
-    bool Compiler::verbose() const
-    {
-        return compilerConfig.verbose;
+        return !hasError;
     }
 
     bool Compiler::preProcess()
     {
-        bool error = false;
+        bool hasError = false;
         for (const Path& path : compilerConfig.srcPaths)
         {
             Path absolutePath = absolute(path);
             if (!exists(absolutePath))
             {
                 noticeError("File or directory not found: " + absolutePath.string());
-                error = true;
+                hasError = true;
             } else
             {
                 if (is_regular_file(absolutePath) && absolutePath.extension() == ".java")
@@ -295,7 +173,7 @@ namespace javac
                 }
             }
         }
-        if (error)
+        if (hasError)
         {
             return false;
         }
@@ -395,6 +273,11 @@ namespace javac
                 hasError = !lexExperimental();
                 break;
             }
+            case JavacAction::Parser:
+            {
+                hasError = !parseExperimental();
+                break;
+            }
             default:
             {
                 jcutils::printErrorCustom("Unknown compiler starting action, this should not happen");
@@ -406,7 +289,7 @@ namespace javac
         if (!post)
         {
             printTerminate();
-            return -1;
+            return false;
         }
 
         endTime = jcutils::getMSTime();

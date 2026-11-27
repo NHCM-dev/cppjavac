@@ -25,7 +25,6 @@ namespace javac
             {AllowExtensionMethods, "extension-methods"},
             {AllowLocalFunctions, "local-functions"},
             {AllowGoto, "goto"},
-            {AllowPrimitiveGenerics, "primitive-generics"},
             {AllowUnsignedIntegers, "unsigned-integers"},
             {AllowCompileTimeEvaluation, "compile-time-evaluation"}
         };

@@ -14,7 +14,10 @@ namespace javac
     {
         Compile = 0,
         Inspect = 1,
-        Lexer = 2
+
+        // Experimental actions
+        Lexer = 100,
+        Parser = 101,
     };
 
     struct JavacConfig

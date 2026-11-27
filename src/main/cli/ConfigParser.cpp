@@ -49,14 +49,27 @@ namespace javac
             bool compile = argIs("-c", "--compile");
             bool inspect = argIs("-i", "--inspect");
             bool lexer = argIs("-l", "--lex");
+            bool parser = argIs("-p", "--parse");
 
-            if (compile || inspect || lexer)
+            if (compile || inspect || lexer || parser)
             {
                 if (action)
                 {
                     throw std::invalid_argument("Duplicate compiler action given");
                 }
-                action = compile ? JavacAction::Compile : (inspect ? JavacAction::Inspect : JavacAction::Lexer);
+                if (parser)
+                {
+                    action = JavacAction::Parser;
+                } else if (lexer)
+                {
+                    action = JavacAction::Lexer;
+                } else if (inspect)
+                {
+                    action = JavacAction::Inspect;
+                } else
+                {
+                    action = JavacAction::Compile;
+                }
                 continue;
             }
 

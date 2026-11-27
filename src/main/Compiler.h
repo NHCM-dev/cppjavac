@@ -8,13 +8,16 @@
 
 #include "core/JavacConfig.h"
 #include "lexer/LexerDef.h"
+#include "parser/Parser.h"
+#include "parser/ast/astdefs/Declarations.h"
 #include "util/DataUtil.h"
 #include "util/FileUtil.h"
 
 namespace javac
 {
-    inline std::string_view LEXER = "lexer";
-    inline std::string_view VERBOSE = "verbose";
+    inline constexpr std::string_view LEXER = "lexer";
+    inline constexpr std::string_view PARSER = "parser";
+    inline constexpr std::string_view VERBOSE = "verbose";
 
     struct CompileRtData
     {
@@ -24,6 +27,9 @@ namespace javac
         std::map<Path, Path> parentPathRecord = {};
 
         std::map<Path, TokenStream> tokenStreams = {};
+        std::map<Path, ParserResult> parserResults = {};
+
+        std::map<Path, std::u16string> sourcesDisplay = {};
 
         std::set<Path> filesToCompile = {};
         std::map<Path, ByteArray> filesToWrite = {};
@@ -51,7 +57,6 @@ namespace javac
         void noticeError(const std::string& error, std::string_view owner = {});
         void noticeWarning(const std::string& warning);
 
-        
 
         bool addParentPath(const Path& sourcePath, const Path& parentPath);
         Path* getParentPath(const Path& sourceFilePath);
@@ -68,10 +73,15 @@ namespace javac
 
         bool compile();
         bool inspect();
+
         bool lex();
         bool reportInvalidTokens(const Path& file, std::u16string_view source, const TokenStream& tokens);
-
         bool lexExperimental();
+
+        bool parse();
+        bool reportParsingErrorExperimental(const Path& file, std::u16string_view source,
+            const ParserResult& parserResult);
+        bool parseExperimental();
 
         bool preProcess();
         bool postProcess();

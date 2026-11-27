@@ -86,6 +86,7 @@ namespace javac
         ConstructorNameMismatch,
 
         StaticInitializerInMemberClass,
+        UnsupportedElementExpression,
     };
 
     class parser_exception : public std::logic_error

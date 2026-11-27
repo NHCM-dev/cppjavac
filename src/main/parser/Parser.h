@@ -16,6 +16,12 @@
 
 namespace javac
 {
+    struct ParserResult
+    {
+        CompilationUnit compilationUnit;
+        std::vector<parser_exception> exceptions;
+    };
+
     /**
      * Class that parse a valid stream of tokens and generate AST tree
      */
@@ -243,7 +249,7 @@ namespace javac
         Parser(TokenStream inputStream, Path filePath,
             std::set<JavacExtension> extensions = {}, LangLevel sourceLangLevel = LangLevel::Eight);
 
-        CompilationUnit parse();
+        ParserResult parse();
     };
 
 } // javac

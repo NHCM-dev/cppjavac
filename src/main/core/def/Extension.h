@@ -33,9 +33,6 @@ enum class JavacExtension : std::uint8_t
     // Control Flow
     AllowGoto,                     // Goto-like source-level jumps
 
-    // Generics
-    AllowPrimitiveGenerics,        // Primitive specialization via code generation
-
     // Other
     AllowUnsignedIntegers,         // Unsigned arithmetic via compiler lowering
     AllowCompileTimeEvaluation,    // Compile-time expression/function evaluation

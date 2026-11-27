@@ -48,7 +48,7 @@ namespace jcutils
     // Check the type name in a permits clause.
     bool canPermit(const javac::TypeNode& typeNode);
     // Check a type argument or wildcard bound. Allow primitives only for exact arguments.
-    bool canGeneric(const javac::TypeNode& typeNode, bool allowPrimitive = false);
+    bool canGeneric(const javac::TypeNode& typeNode);
 
 
     bool haveModifier(const std::vector<javac::ModifierFlag>& modifiers, javac::FlagType flag);

@@ -27,13 +27,12 @@ namespace javac
         });
     }
 
-    CompilationUnit Parser::parse()
+    ParserResult Parser::parse()
     {
         compilationUnit = {};
         tokenPointer = 0;
         typeCloseRemainder.reset();
         CompilationUnitType compilationUnitType = decideType(this->filePath);
-
 
         switch (compilationUnitType)
         {
@@ -48,12 +47,16 @@ namespace javac
                 break;
             }
         }
-        return std::move(compilationUnit);
+        ParserResult result;
+        result.compilationUnit = std::move(compilationUnit);
+        //TODO: IMPORTANT: result.exceptions has to be collected,
+        // the current design of Parser is that when any exception thrown, the entire process will terminate!
+        return result;
     }
 
     void Parser::parseOrdinary()
     {
-        auto annotations = parseAnnotations();
+        std::vector<Annotation> annotations = parseAnnotations();
         if (checkKeyword(PACKAGE))
         {
             compilationUnit.packageDecl = parsePackageDecl(std::move(annotations));
@@ -79,7 +82,9 @@ namespace javac
             {
                 modifiers.push_back(std::move(modifier));
             }
-            compilationUnit.decls.push_back(std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers))));
+
+            std::unique_ptr<ClassDecl> classDecl = std::make_unique<ClassDecl>(parseClassDecl(std::move(modifiers)));
+            compilationUnit.decls.push_back(std::move(classDecl));
             annotations = parseAnnotations();
         }
     }
@@ -229,13 +234,9 @@ namespace javac
             arg.genericType = GenericType::Exact;
             const Token& token = peek();
             arg.type = std::make_unique<TypeNode>(parseTypeNode(std::move(pendingAnnotations)));
-            const bool allowPrimitive = extensionEnabled(JavacExtension::AllowPrimitiveGenerics);
-            if (!jcutils::canGeneric(*arg.type, allowPrimitive))
+            if (!jcutils::canGeneric(*arg.type))
             {
-                const auto error = allowPrimitive && arg.type->objectType == ObjectType::Void
-                    ? ParserExceptionType::EXTENSION_VoidInGeneric
-                    : ParserExceptionType::InvalidExactGeneric;
-                throw parser_exception(error, token);
+                throw parser_exception(ParserExceptionType::InvalidExactGeneric, token);
             }
             typeArgs.push_back(std::move(arg));
         } while (matchSymbol(SymbolType::Comma));
@@ -872,6 +873,7 @@ namespace javac
     std::unique_ptr<Expr> Parser::parseElementExpr()
     {
         //TODO: implement
+        throw parser_exception(ParserExceptionType::UnsupportedElementExpression, peek());
     }
 
     std::vector<GenericParameter> Parser::parseGenericParameters()

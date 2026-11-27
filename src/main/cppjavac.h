@@ -27,9 +27,9 @@ namespace javac
     inline std::string version =
 R"(
 cppjavac for Java 8
-Version 0.0.2
-Build b0.2
-Date 2026-11-23
+Version 0.1
+Build b0.4
+Date 2026-11-26
 
 )";
 
@@ -46,6 +46,8 @@ Required options:
                                    generating output
     -l, --lex                      Test lexer functionality and write tokens
                                    result (experimental)
+    -p, --parse                    Test parser functionality and write out
+                                   Abstract Syntax Tree result (experimental)
 
 Options:
 

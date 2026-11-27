@@ -184,10 +184,9 @@ namespace jcutils
             });
     }
 
-    bool canGeneric(const javac::TypeNode& typeNode, bool allowPrimitive)
+    bool canGeneric(const javac::TypeNode& typeNode)
     {
-        return isActualClass(typeNode) || typeNode.objectType == javac::ObjectType::Array
-            || (allowPrimitive && isPrimitive(typeNode));
+        return isActualClass(typeNode) || typeNode.objectType == javac::ObjectType::Array;
     }
 
     bool haveModifier(const std::vector<javac::ModifierFlag>& modifiers, javac::FlagType flag)
