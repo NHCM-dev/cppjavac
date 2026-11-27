@@ -7,10 +7,8 @@
 
 #include "LexerDef.h"
 #include "main/core/def/Extension.h"
-#include <stdexcept>
 
 #include <cstddef>
-#include <optional>
 #include <set>
 #include <string>
 #include <string_view>

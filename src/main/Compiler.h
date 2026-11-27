@@ -11,7 +11,6 @@
 #include "parser/Parser.h"
 #include "parser/ast/astdefs/Declarations.h"
 #include "util/DataUtil.h"
-#include "util/FileUtil.h"
 
 namespace javac
 {

@@ -4,7 +4,6 @@
 
 #include "Compiler.h"
 
-#include <cstdio>
 #include <stdexcept>
 #include <utility>
 
@@ -15,7 +14,6 @@
 #include "tool/EncodingTool.h"
 #include "tool/FileIoTool.h"
 #include "util/ExceptionUtil.h"
-#include "util/FileUtil.h"
 #include "util/MathUtil.h"
 #include "util/PrintUtil.h"
 
@@ -260,22 +258,22 @@ namespace javac
         {
             case JavacAction::Compile:
             {
-                hasError = !compile();
+                hasError |= !compile();
                 break;
             }
             case JavacAction::Inspect:
             {
-                hasError = !inspect();
+                hasError |= !inspect();
                 break;
             }
             case JavacAction::Lexer:
             {
-                hasError = !lexExperimental();
+                hasError |= !lexExperimental();
                 break;
             }
             case JavacAction::Parser:
             {
-                hasError = !parseExperimental();
+                hasError |= !parseExperimental();
                 break;
             }
             default:
@@ -283,6 +281,12 @@ namespace javac
                 jcutils::printErrorCustom("Unknown compiler starting action, this should not happen");
                 return false;
             }
+        }
+
+        if (hasError)
+        {
+            printTerminate();
+            return false;
         }
 
         bool post = postProcess();
@@ -296,6 +300,6 @@ namespace javac
 
         jcutils::printInfoBy("Finished compiling, time took: " + std::to_string((endTime - startTime)) + "ms");
 
-        return !hasError;
+        return true;
     }
 } // javac

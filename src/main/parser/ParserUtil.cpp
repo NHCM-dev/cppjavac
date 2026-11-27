@@ -9,7 +9,6 @@
 #include <charconv>
 #include <limits>
 #include <set>
-#include <span>
 
 #include "main/tool/EncodingTool.h"
 #include "main/util/MathUtil.h"
