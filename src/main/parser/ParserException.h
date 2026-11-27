@@ -30,16 +30,17 @@ namespace javac
         NeedBraceForClassDeclaration,
 
         NotLiteral,
-
-        InvalidNumberLiteral,
+        
         OutOfRangeNumberLiteral,
 
         KeywordInTypeSpecification,
+        KeywordInParameterTypeSpecification,
+        KeywordInClassLiteral,
 
         VoidAsTypeSpecification,
 
-        KeywordInParameterTypeSpecification,
         DuplicateFinalInParameterTypeSpecification,
+        DuplicateModifier,
 
         TypeArgUnboundUndefinedBehaviour,
 
@@ -49,22 +50,33 @@ namespace javac
         CannotBeSuper,
         CannotImplementsTo,
         CannotPermitsTo,
-        InvalidExactGeneric,
+
 
         GenericInClassLiteral,
-        KeywordInClassLiteral,
-        InvalidThrowsType,
         UnsupportedParameterDefault,
 
         ModifierNotAllowedForClass,
         ModifierNotAllowedForField,
         ModifierNotAllowedForMethod,
         ModifierNotAllowedForConstructor,
-        DuplicateModifier,
+
         ConflictingAccessModifiers,
         ConflictingClassModifiers,
         ConflictingFieldModifiers,
-        ConflictingMethodModifiers
+        ConflictingMethodModifiers,
+
+        ConstructorNotAllowedInContext,
+
+        ReceiverParameterNotAllowed,
+
+        TypeParametersNotAllowedForAnnotationElement,
+
+        InvalidNumberLiteral,
+        InvalidExactGeneric,
+        InvalidThrowsType,
+        InvalidAnnotationElementType,
+
+        InterfaceFieldRequiresInitializer
     };
 
     class parser_exception : public std::logic_error

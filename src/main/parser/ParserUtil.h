@@ -53,13 +53,37 @@ namespace jcutils
 
     bool haveModifier(const std::vector<javac::ModifierFlag>& modifiers, javac::FlagType flag);
 
-    // === methods to detect whenever a vector of modifiers contains invalid elements for some types ===
-    // The determination is context less
+    enum class ClassDeclContext
+    {
+        TopLevel,
+        Member,
+        Interface, // Member class declared in an interface.
+        Annotation, // Member class declared in an annotation interface.
+        Local
+    };
 
-    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers, javac::LangLevel langLevel = javac::LangLevel::Eight);
-    bool modifiersAllowedForField(std::vector<javac::ModifierFlag>& modifiers);
-    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers);
-    bool modifiersAllowedForConstructor(std::vector<javac::ModifierFlag>& modifiers);
+    [[nodiscard]] constexpr bool isInterfaceBody(ClassDeclContext context)
+    {
+        return context == ClassDeclContext::Interface || context == ClassDeclContext::Annotation;
+    }
+
+    enum class MethodDeclContext
+    {
+        Normal,
+        Interface,
+        AnnotationElement
+    };
+
+    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers,
+        javac::LangLevel langLevel = javac::LangLevel::Eight,
+        ClassDeclContext context = ClassDeclContext::TopLevel);
+    bool modifiersAllowedForField(const std::vector<javac::ModifierFlag>& modifiers,
+        ClassDeclContext context = ClassDeclContext::TopLevel);
+    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers,
+        MethodDeclContext context = MethodDeclContext::Normal,
+        javac::LangLevel langLevel = javac::LangLevel::Eight);
+    bool modifiersAllowedForConstructor(const std::vector<javac::ModifierFlag>& modifiers,
+        ClassDeclContext context = ClassDeclContext::TopLevel);
 
     enum class ModifierDeclaration
     {
@@ -72,7 +96,6 @@ namespace jcutils
     // Returns the first duplicate, or a conflict in the declaration's keyword modifiers.
     [[nodiscard]] std::optional<javac::ParserExceptionType> findModifierConflict(
         const std::vector<javac::ModifierFlag>& modifiers, ModifierDeclaration declaration);
-
 
 } // jcutils
 

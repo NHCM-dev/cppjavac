@@ -198,69 +198,68 @@ namespace jcutils
         });
     }
 
-    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers)
+    bool modifiersAllowedForMethod(std::vector<javac::ModifierFlag>& modifiers,
+        MethodDeclContext context, javac::LangLevel langLevel)
     {
-        static constexpr javac::FlagType allowed[] = {
-            javac::FlagType::Public,
-            javac::FlagType::Protected,
-            javac::FlagType::Private,
-            javac::FlagType::Abstract,
-            javac::FlagType::Static,
-            javac::FlagType::Final,
-            javac::FlagType::Native,
-            javac::FlagType::Synchronized,
-            javac::FlagType::Strictfp,
-            javac::FlagType::Default
+        using enum javac::FlagType;
+        static constexpr javac::FlagType normal[] = {
+            Public, Protected, Private, Abstract, Static, Final, Native, Synchronized, Strictfp
         };
-        return std::ranges::all_of(modifiers, [&](const auto& modifier)
-        {
-            if (!modifier.flagType.has_value())
-            {
-                return true;
-            }
-            return contains(allowed, modifier.flagType.value());
-        });
-    }
-
-    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers, javac::LangLevel langLevel)
-    {
-        static constexpr javac::FlagType allowed[] = {
-            javac::FlagType::Public,
-            javac::FlagType::Protected,
-            javac::FlagType::Private,
-            javac::FlagType::Abstract,
-            javac::FlagType::Static,
-            javac::FlagType::Final,
-            javac::FlagType::Strictfp,
-        };
-        static constexpr javac::FlagType allowed17[] = {
-            javac::FlagType::Public,
-            javac::FlagType::Protected,
-            javac::FlagType::Private,
-            javac::FlagType::Abstract,
-            javac::FlagType::Static,
-            javac::FlagType::Final,
-            javac::FlagType::Strictfp,
-            javac::FlagType::Sealed,
-            javac::FlagType::NonSealed
-        };
-        const auto level = static_cast<uint8_t>(langLevel);
-        const std::span<const javac::FlagType> flags =
-            level >= 17
-        ? std::span<const javac::FlagType>(allowed17)
-        : std::span<const javac::FlagType>(allowed);
 
         return std::ranges::all_of(modifiers, [&](const auto& modifier)
         {
-            if (!modifier.flagType.has_value())
+            if (!modifier.flagType)
             {
                 return true;
             }
-            return contains(flags, modifier.flagType.value());
+            const auto flag = *modifier.flagType;
+            switch (context)
+            {
+            case MethodDeclContext::Normal:
+                return contains(normal, flag);
+            case MethodDeclContext::Interface:
+                return flag == Public || flag == Abstract || flag == Default || flag == Static || flag == Strictfp
+                    || (flag == Private && langLevel >= javac::LangLevel::Nine);
+            case MethodDeclContext::AnnotationElement:
+                return flag == Public || flag == Abstract;
+            }
+            return false;
         });
     }
 
-    bool modifiersAllowedForField(std::vector<javac::ModifierFlag>& modifiers)
+    bool modifiersAllowedForClass(std::vector<javac::ModifierFlag>& modifiers, javac::LangLevel langLevel,
+        ClassDeclContext context)
+    {
+        using enum javac::FlagType;
+        return std::ranges::all_of(modifiers, [&](const auto& modifier)
+        {
+            if (!modifier.flagType)
+            {
+                return true;
+            }
+            switch (*modifier.flagType)
+            {
+            case Abstract:
+            case Final:
+            case Strictfp:
+                return true;
+            case Public:
+                return context != ClassDeclContext::Local;
+            case Protected:
+            case Private:
+                return context == ClassDeclContext::Member;
+            case Static:
+                return context != ClassDeclContext::TopLevel && context != ClassDeclContext::Local;
+            case Sealed:
+            case NonSealed:
+                return context != ClassDeclContext::Local && langLevel >= javac::LangLevel::Seventeen;
+            default:
+                return false;
+            }
+        });
+    }
+
+    bool modifiersAllowedForField(const std::vector<javac::ModifierFlag>& modifiers, ClassDeclContext context)
     {
         static constexpr javac::FlagType allowed[] = {
             javac::FlagType::Public,
@@ -277,12 +276,22 @@ namespace jcutils
             {
                 return true;
             }
-            return contains(allowed, modifier.flagType.value());
+            const auto flag = *modifier.flagType;
+            if (isInterfaceBody(context))
+            {
+                return flag == javac::FlagType::Public || flag == javac::FlagType::Static || flag == javac::FlagType::Final;
+            }
+            return contains(allowed, flag);
         });
     }
 
-    bool modifiersAllowedForConstructor(std::vector<javac::ModifierFlag>& modifiers)
+    bool modifiersAllowedForConstructor(const std::vector<javac::ModifierFlag>& modifiers, ClassDeclContext context)
     {
+        if (isInterfaceBody(context))
+        {
+            return false;
+        }
+
         static constexpr javac::FlagType allowed[] = {
             javac::FlagType::Public,
             javac::FlagType::Protected,

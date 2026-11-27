@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "ParserUtil.h"
 #include "ast/ASTDef.h"
 #include "main/parser/ast/astdefs/Declarations.h"
 #include "main/parser/ast/astdefs/Expressions.h"
@@ -145,18 +146,23 @@ namespace javac
          * @return the constructed package declaration
          */
         PackageDecl parsePackageDecl(std::vector<Annotation> annotations = {});
-        ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {});
+        ClassDecl parseClassDecl(std::vector<ModifierFlag> modifiers = {},
+            jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel);
 
         std::vector<ModifierFlag> parseModifierFlags();
 
-        FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers = {});
+        // The context identifies the body containing the declaration.
+        FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers = {},
+            jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel);
 
 
         // Method declaration
         MethodDecl parseMethodDecl(std::vector<ModifierFlag> modifiers = {},
-         std::optional<ReceiverParameter> receiverParameter = std::nullopt);
+            jcutils::MethodDeclContext context = jcutils::MethodDeclContext::Normal,
+            std::optional<ReceiverParameter> receiverParameter = std::nullopt);
         ConstructorDecl parseConstructorDecl(std::vector<ModifierFlag> modifiers = {},
-         std::optional<ReceiverParameter> receiverParameter = std::nullopt);
+            jcutils::ClassDeclContext context = jcutils::ClassDeclContext::TopLevel,
+            std::optional<ReceiverParameter> receiverParameter = std::nullopt);
         /**
          * Parse parameters declaration in the parenthesis of a method declaration
          * Expect that a '(' token has been consumed. This function will consume a ')' token at the end

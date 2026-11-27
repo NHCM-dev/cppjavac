@@ -125,9 +125,10 @@ namespace javac
 
         if (checkKeyword())
         {
-            std::optional<PrimitiveType> primitive = primitiveTypeFromKeyword(peek(1).keyword.value());
+            std::optional<PrimitiveType> primitive = primitiveTypeFromKeyword(peek().keyword.value());
             if (primitive)
             {
+                advance();
                 return settlePrimitive(primitive.value());
             }
             if (!peek().canBeIdentifier)
@@ -259,13 +260,13 @@ namespace javac
         return decl;
     }
 
-    ClassDecl Parser::parseClassDecl(std::vector<ModifierFlag> modifiers)
+    ClassDecl Parser::parseClassDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context)
     {
         expectKeyword(CLASS);
 
         ClassDecl decl;
 
-        if (!jcutils::modifiersAllowedForClass(modifiers, sourceLangLevel))
+        if (!jcutils::modifiersAllowedForClass(modifiers, sourceLangLevel, context))
         {
             //TODO: site source for invalid modifiers
             throw parser_exception(ParserExceptionType::ModifierNotAllowedForClass);
@@ -379,10 +380,10 @@ namespace javac
         return vectors;
     }
 
-    FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers)
+    FieldDecl Parser::parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context)
     {
         FieldDecl fieldDecl;
-        if (!jcutils::modifiersAllowedForField(modifiers))
+        if (!jcutils::modifiersAllowedForField(modifiers, context))
         {
             //TODO: site source for invalid modifiers
             throw parser_exception(ParserExceptionType::ModifierNotAllowedForField);
@@ -417,6 +418,10 @@ namespace javac
                 //TODO: implement parse initializer
                 variableDeclarator.initializer = nullptr;
             }
+            else if (jcutils::isInterfaceBody(context))
+            {
+                throw parser_exception(ParserExceptionType::InterfaceFieldRequiresInitializer, peek());
+            }
             fieldDecl.declarators.push_back(std::move(variableDeclarator));
         } while (matchSymbol(SymbolType::Comma));
 
@@ -425,10 +430,12 @@ namespace javac
         return fieldDecl;
     }
 
-    MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
+    MethodDecl Parser::parseMethodDecl(std::vector<ModifierFlag> modifiers,
+        jcutils::MethodDeclContext context,
+        std::optional<ReceiverParameter> receiverParameter)
     {
         MethodDecl methodDecl;
-        if (!jcutils::modifiersAllowedForMethod(modifiers))
+        if (!jcutils::modifiersAllowedForMethod(modifiers, context, sourceLangLevel))
         {
             //TODO: site source for invalid modifiers
             throw parser_exception(ParserExceptionType::ModifierNotAllowedForMethod);
@@ -438,9 +445,26 @@ namespace javac
             //TODO: Attach the conflicting modifier token site.
             throw parser_exception(*conflict);
         }
+        const bool annotationElement = context == jcutils::MethodDeclContext::AnnotationElement;
+        const bool isStatic = jcutils::haveModifier(modifiers, FlagType::Static);
+        if (receiverParameter && (annotationElement || isStatic))
+        {
+            //TODO: Attach the receiver parameter token site.
+            throw parser_exception(ParserExceptionType::ReceiverParameterNotAllowed);
+        }
+
+        const bool needsBody = context == jcutils::MethodDeclContext::Normal
+            ? !jcutils::haveModifier(modifiers, FlagType::Abstract) && !jcutils::haveModifier(modifiers, FlagType::Native)
+            : context == jcutils::MethodDeclContext::Interface
+                && (isStatic || jcutils::haveModifier(modifiers, FlagType::Default)
+                    || jcutils::haveModifier(modifiers, FlagType::Private));
         methodDecl.modifiers = std::move(modifiers);
         if (checkSymbol(SymbolType::LAngleBracket))
         {
+            if (annotationElement)
+            {
+                throw parser_exception(ParserExceptionType::TypeParametersNotAllowedForAnnotationElement, peek());
+            }
             methodDecl.typeParameters = parseGenericParameters();
         }
 
@@ -449,18 +473,41 @@ namespace javac
         {
             retAnnotations = parseAnnotations();
         }
-        TypeNode returnType = parseTypeNode(std::move(retAnnotations));
-        methodDecl.returnType = std::move(returnType);
+        const Token& returnTypeStart = peek();
+        methodDecl.returnType = parseTypeNode(std::move(retAnnotations));
 
         methodDecl.receiverParam = std::move(receiverParameter);
         methodDecl.name = expectIdentifier().content;
 
         expectSymbol(SymbolType::LParen);
-        methodDecl.parameters = parseMethodParameters();
+        if (annotationElement)
+        {
+            expectSymbol(SymbolType::RParen);
+        }
+        else
+        {
+            methodDecl.parameters = parseMethodParameters();
+        }
 
         if (methodDecl.returnType.objectType != ObjectType::Void)
         {
             methodDecl.returnDimensions = parseArrayDimension();
+        }
+
+        if (annotationElement)
+        {
+            if (methodDecl.returnType.objectType == ObjectType::Void
+                || methodDecl.returnType.dimensions.size() + methodDecl.returnDimensions.size() > 1)
+            {
+                throw parser_exception(ParserExceptionType::InvalidAnnotationElementType, returnTypeStart);
+            }
+            //TODO: Resolve named annotation element return types when type resolution is available.
+            if (matchKeyword(DEFAULT))
+            {
+                methodDecl.defaultValue = parseElementValue();
+            }
+            expectSymbol(SymbolType::Semicolon);
+            return methodDecl;
         }
 
         if (matchKeyword(THROWS))
@@ -475,27 +522,31 @@ namespace javac
                 }
                 methodDecl.thrownTypes.push_back(std::move(type));
             } while (matchSymbol(SymbolType::Comma));
-        } else if (matchKeyword(DEFAULT))
+        }
+
+        if (needsBody)
         {
-            methodDecl.defaultValue = parseElementValue();
+            methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
+        }
+        else
+        {
             expectSymbol(SymbolType::Semicolon);
-            return methodDecl;
         }
-
-        if (matchSymbol(SymbolType::Semicolon))
-        {
-            return methodDecl;
-        }
-
-        methodDecl.body = std::make_unique<BlockStatement>(parseMethodBody());
 
         return methodDecl;
     }
 
-    ConstructorDecl Parser::parseConstructorDecl(std::vector<ModifierFlag> modifiers, std::optional<ReceiverParameter> receiverParameter)
+    ConstructorDecl Parser::parseConstructorDecl(std::vector<ModifierFlag> modifiers,
+        jcutils::ClassDeclContext context,
+        std::optional<ReceiverParameter> receiverParameter)
     {
+        if (jcutils::isInterfaceBody(context))
+        {
+            throw parser_exception(ParserExceptionType::ConstructorNotAllowedInContext, peek());
+        }
+
         ConstructorDecl methodDecl;
-        if (!jcutils::modifiersAllowedForConstructor(modifiers))
+        if (!jcutils::modifiersAllowedForConstructor(modifiers, context))
         {
             //TODO: site source for invalid modifiers
             throw parser_exception(ParserExceptionType::ModifierNotAllowedForConstructor);
