@@ -221,6 +221,9 @@ namespace javac
         Uptr<AssertStatement> parseAssertStatement();
         Uptr<BreakStatement> parseBreakStatement();
 
+        Uptr<SynchronizedStatement> parseSynchronizedStatement();
+        Uptr<TryStatement> parseTryStatement();
+
         // Annotation declaration
         /**
          * Try parse annotations, will consume an '@' symbol token

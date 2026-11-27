@@ -42,10 +42,16 @@ namespace javac
 
     enum class LangLevel : std::uint8_t
     {
+        One = 1,  // Java 1.0
+        Two = 2,  // Java 1.2
+        Four = 4, // Java 1.4
+        Five = 5,
         Eight = 8,
         Nine = 9,
+        Ten = 10,
         Eleven = 11,
         Fourteen = 14,
+        Sixteen = 16,
         Seventeen = 17,
         TwentyOne = 21,
         TwentyFive = 25
@@ -142,83 +148,85 @@ namespace javac
     };
 
 
-    inline constexpr JavaKeyword ABSTRACT{"abstract"};
-    inline constexpr JavaKeyword ASSERT{"assert"};
-    inline constexpr JavaKeyword BOOLEAN{"boolean"};
-    inline constexpr JavaKeyword BREAK{"break"};
-    inline constexpr JavaKeyword BYTE{"byte"};
-    inline constexpr JavaKeyword CASE{"case"};
-    inline constexpr JavaKeyword CATCH{"catch"};
-    inline constexpr JavaKeyword CHAR{"char"};
-    inline constexpr JavaKeyword CLASS{"class"};
-    inline constexpr JavaKeyword CONST{"const", LangLevel::Eight, JavaKeywordKind::ReservedUnused};
-    inline constexpr JavaKeyword CONTINUE{"continue"};
-    inline constexpr JavaKeyword DEFAULT{"default"};
-    inline constexpr JavaKeyword DO{"do"};
-    inline constexpr JavaKeyword DOUBLE{"double"};
-    inline constexpr JavaKeyword ELSE{"else"};
-    inline constexpr JavaKeyword ENUM{"enum"};
-    inline constexpr JavaKeyword EXTENDS{"extends"};
-    inline constexpr JavaKeyword FINAL{"final"};
-    inline constexpr JavaKeyword FINALLY{"finally"};
-    inline constexpr JavaKeyword FLOAT{"float"};
-    inline constexpr JavaKeyword FOR{"for"};
-    inline constexpr JavaKeyword GOTO{"goto", LangLevel::Eight, JavaKeywordKind::ReservedUnused};
-    inline constexpr JavaKeyword IF{"if"};
-    inline constexpr JavaKeyword IMPLEMENTS{"implements"};
-    inline constexpr JavaKeyword IMPORT{"import"};
-    inline constexpr JavaKeyword INSTANCEOF{"instanceof"};
-    inline constexpr JavaKeyword INT{"int"};
-    inline constexpr JavaKeyword INTERFACE{"interface"};
-    inline constexpr JavaKeyword LONG{"long"};
-    inline constexpr JavaKeyword NATIVE{"native"};
-    inline constexpr JavaKeyword NEW{"new"};
-    inline constexpr JavaKeyword PACKAGE{"package"};
-    inline constexpr JavaKeyword PRIVATE{"private"};
-    inline constexpr JavaKeyword PROTECTED{"protected"};
-    inline constexpr JavaKeyword PUBLIC{"public"};
-    inline constexpr JavaKeyword RETURN{"return"};
-    inline constexpr JavaKeyword SHORT{"short"};
-    inline constexpr JavaKeyword STATIC{"static"};
-    inline constexpr JavaKeyword STRICTFP{"strictfp"};
-    inline constexpr JavaKeyword SUPER{"super"};
-    inline constexpr JavaKeyword SWITCH{"switch"};
-    inline constexpr JavaKeyword SYNCHRONIZED{"synchronized"};
-    inline constexpr JavaKeyword THIS{"this"};
-    inline constexpr JavaKeyword THROW{"throw"};
-    inline constexpr JavaKeyword THROWS{"throws"};
-    inline constexpr JavaKeyword TRANSIENT{"transient"};
-    inline constexpr JavaKeyword TRY{"try"};
-    inline constexpr JavaKeyword VOID{"void"};
-    inline constexpr JavaKeyword VOLATILE{"volatile"};
-    inline constexpr JavaKeyword WHILE{"while"};
+    inline constexpr JavaKeyword ABSTRACT{"abstract", LangLevel::One};
+    inline constexpr JavaKeyword ASSERT{"assert", LangLevel::Four};
+    inline constexpr JavaKeyword BOOLEAN{"boolean", LangLevel::One};
+    inline constexpr JavaKeyword BREAK{"break", LangLevel::One};
+    inline constexpr JavaKeyword BYTE{"byte", LangLevel::One};
+    inline constexpr JavaKeyword CASE{"case", LangLevel::One};
+    inline constexpr JavaKeyword CATCH{"catch", LangLevel::One};
+    inline constexpr JavaKeyword CHAR{"char", LangLevel::One};
+    inline constexpr JavaKeyword CLASS{"class", LangLevel::One};
+    inline constexpr JavaKeyword CONST{"const", LangLevel::One, JavaKeywordKind::ReservedUnused};
+    inline constexpr JavaKeyword CONTINUE{"continue", LangLevel::One};
+    inline constexpr JavaKeyword DEFAULT{"default", LangLevel::One};
+    inline constexpr JavaKeyword DO{"do", LangLevel::One};
+    inline constexpr JavaKeyword DOUBLE{"double", LangLevel::One};
+    inline constexpr JavaKeyword ELSE{"else", LangLevel::One};
+    inline constexpr JavaKeyword ENUM{"enum", LangLevel::Five};
+    inline constexpr JavaKeyword EXTENDS{"extends", LangLevel::One};
+    inline constexpr JavaKeyword FINAL{"final", LangLevel::One};
+    inline constexpr JavaKeyword FINALLY{"finally", LangLevel::One};
+    inline constexpr JavaKeyword FLOAT{"float", LangLevel::One};
+    inline constexpr JavaKeyword FOR{"for", LangLevel::One};
+    inline constexpr JavaKeyword GOTO{"goto", LangLevel::One, JavaKeywordKind::ReservedUnused};
+    inline constexpr JavaKeyword IF{"if", LangLevel::One};
+    inline constexpr JavaKeyword IMPLEMENTS{"implements", LangLevel::One};
+    inline constexpr JavaKeyword IMPORT{"import", LangLevel::One};
+    inline constexpr JavaKeyword INSTANCEOF{"instanceof", LangLevel::One};
+    inline constexpr JavaKeyword INT{"int", LangLevel::One};
+    inline constexpr JavaKeyword INTERFACE{"interface", LangLevel::One};
+    inline constexpr JavaKeyword LONG{"long", LangLevel::One};
+    inline constexpr JavaKeyword NATIVE{"native", LangLevel::One};
+    inline constexpr JavaKeyword NEW{"new", LangLevel::One};
+    inline constexpr JavaKeyword PACKAGE{"package", LangLevel::One};
+    inline constexpr JavaKeyword PRIVATE{"private", LangLevel::One};
+    inline constexpr JavaKeyword PROTECTED{"protected", LangLevel::One};
+    inline constexpr JavaKeyword PUBLIC{"public", LangLevel::One};
+    inline constexpr JavaKeyword RETURN{"return", LangLevel::One};
+    inline constexpr JavaKeyword SHORT{"short", LangLevel::One};
+    inline constexpr JavaKeyword STATIC{"static", LangLevel::One};
+    inline constexpr JavaKeyword STRICTFP{"strictfp", LangLevel::Two};
+    inline constexpr JavaKeyword SUPER{"super", LangLevel::One};
+    inline constexpr JavaKeyword SWITCH{"switch", LangLevel::One};
+    inline constexpr JavaKeyword SYNCHRONIZED{"synchronized", LangLevel::One};
+    inline constexpr JavaKeyword THIS{"this", LangLevel::One};
+    inline constexpr JavaKeyword THROW{"throw", LangLevel::One};
+    inline constexpr JavaKeyword THROWS{"throws", LangLevel::One};
+    inline constexpr JavaKeyword TRANSIENT{"transient", LangLevel::One};
+    inline constexpr JavaKeyword TRY{"try", LangLevel::One};
+    inline constexpr JavaKeyword VOID{"void", LangLevel::One};
+    inline constexpr JavaKeyword VOLATILE{"volatile", LangLevel::One};
+    inline constexpr JavaKeyword WHILE{"while", LangLevel::One};
 
     // Fixed literal spellings share the lookup table with keywords.
-    inline constexpr JavaKeyword TRUE_LITERAL{"true", LangLevel::Eight, JavaKeywordKind::BooleanLiteral};
-    inline constexpr JavaKeyword FALSE_LITERAL{"false", LangLevel::Eight, JavaKeywordKind::BooleanLiteral};
-    inline constexpr JavaKeyword NULL_LITERAL{"null", LangLevel::Eight, JavaKeywordKind::NullLiteral};
+    inline constexpr JavaKeyword TRUE_LITERAL{"true", LangLevel::One, JavaKeywordKind::BooleanLiteral};
+    inline constexpr JavaKeyword FALSE_LITERAL{"false", LangLevel::One, JavaKeywordKind::BooleanLiteral};
+    inline constexpr JavaKeyword NULL_LITERAL{"null", LangLevel::One, JavaKeywordKind::NullLiteral};
 
-    // Java 11 (features introduced in Java 9–11)
-    inline constexpr JavaKeyword UNDERSCORE{"_", LangLevel::Eleven};
+    // Java 9
+    inline constexpr JavaKeyword UNDERSCORE{"_", LangLevel::Nine};
 
     // Module system
-    inline constexpr JavaKeyword MODULE{"module", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword OPEN{"open", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword OPENS{"opens", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword REQUIRES{"requires", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword TRANSITIVE{"transitive", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword EXPORTS{"exports", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword TO{"to", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword USES{"uses", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword PROVIDES{"provides", LangLevel::Eleven, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword WITH{"with", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword MODULE{"module", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword OPEN{"open", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword OPENS{"opens", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword REQUIRES{"requires", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword TRANSITIVE{"transitive", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword EXPORTS{"exports", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword TO{"to", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword USES{"uses", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword PROVIDES{"provides", LangLevel::Nine, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword WITH{"with", LangLevel::Nine, JavaKeywordKind::Contextual};
 
     // Local variable type inference
-    inline constexpr JavaKeyword VAR{"var", LangLevel::Eleven, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword VAR{"var", LangLevel::Ten, JavaKeywordKind::Contextual};
 
-    // Java 17 (features introduced in Java 12–17)
-    inline constexpr JavaKeyword YIELD{"yield", LangLevel::Seventeen, JavaKeywordKind::Contextual};
-    inline constexpr JavaKeyword RECORD{"record", LangLevel::Seventeen, JavaKeywordKind::Contextual};
+    // Switch expressions and records
+    inline constexpr JavaKeyword YIELD{"yield", LangLevel::Fourteen, JavaKeywordKind::Contextual};
+    inline constexpr JavaKeyword RECORD{"record", LangLevel::Sixteen, JavaKeywordKind::Contextual};
+
+    // Sealed types
     inline constexpr JavaKeyword SEALED{"sealed", LangLevel::Seventeen, JavaKeywordKind::Contextual};
     inline constexpr JavaKeyword PERMITS{"permits", LangLevel::Seventeen, JavaKeywordKind::Contextual};
     inline constexpr JavaKeyword NON_SEALED{"non-sealed", LangLevel::Seventeen, JavaKeywordKind::Contextual};

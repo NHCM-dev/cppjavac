@@ -830,6 +830,14 @@ namespace javac
         {
             return parseBreakStatement();
         }
+        if (checkKeyword(SYNCHRONIZED))
+        {
+            return parseSynchronizedStatement();
+        }
+        if (checkKeyword(TRY))
+        {
+            return parseTryStatement();
+        }
 
         if (checkIdentifier() && peek(1).symbol == SymbolType::Colon)
         {
@@ -1094,6 +1102,28 @@ namespace javac
         statement->range->end = expectSymbol(SymbolType::Semicolon).range.end;
 
         return statement;
+    }
+
+    Uptr<SynchronizedStatement> Parser::parseSynchronizedStatement()
+    {
+        Uptr<SynchronizedStatement> statement = makeUniq<SynchronizedStatement>();
+
+        statement->range = expectKeyword(SYNCHRONIZED).range;
+
+        expectSymbol(SymbolType::LParen);
+        statement->monitorExpr = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        statement->body = makeUniq<BlockStatement>(parseBlock());
+        statement->range->end = statement->body->range->end;
+
+        return statement;
+    }
+
+    Uptr<TryStatement> Parser::parseTryStatement()
+    {
+        Uptr<TryStatement> statement = makeUniq<TryStatement>();
+        //TODO: implement
     }
 
     std::vector<Annotation> Parser::parseAnnotations()
