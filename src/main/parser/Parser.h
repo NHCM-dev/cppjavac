@@ -41,6 +41,11 @@ namespace javac
         size_t tokenPointer = 0;
         std::optional<std::pair<std::size_t, Token>> typeCloseRemainder;
 
+
+
+
+
+
         // === basic tools ===
 
         // Returns the reference of token stream
@@ -124,30 +129,12 @@ namespace javac
           */
         const Token& expectIdentifier();
 
-        // ======
 
-        /**
-         * Parse a TypeNode if you are sure that from this token it is going to be a type specification
-         * Will auto proces annotations at the front
-         * When varargs is supplied, consumes and records a trailing annotated or bare ellipsis.
-         * @return TypeNode parsed
-         */
-        TypeNode parseTypeNode(std::vector<Annotation> annotations = {},
-            std::optional<ArrayDimension>* varargs = nullptr);
 
-        /**
-         * Parse a vector of ArrayDimension for type specification
-         * Annotations are automatically process, include the prefix one
-         * @return parsed ArrayDimensions or empty if nothing parsed
-         */
-        std::vector<ArrayDimension> parseArrayDimension(bool allowAnnotation = true,
-            std::optional<ArrayDimension>* varargs = nullptr);
 
-        // Parse TypeArg defined within <...>, Like "String" in "List<String>"
-        // It must be specific type or unbound, not for class generic parameter declaration
-        // By invoking this method, a Left angle bracket should be consumed, and this method won't consume the Right angle bracket
-        std::vector<TypeArg> parseTypeArgs();
-        
+
+
+        // === Decl ===
 
         /**
          * Try parse a package declaration start from keyword "package"
@@ -172,8 +159,6 @@ namespace javac
             jcutils::ClassDeclContext classContext, jcutils::MethodDeclContext methodContext,
             std::optional<ReceiverParameter> receiverParameter = std::nullopt);
 
-        std::vector<ModifierFlag> parseModifierFlags();
-
         // The context identifies the body containing the declaration.
         FieldDecl parseFieldDecl(std::vector<ModifierFlag> modifiers, jcutils::ClassDeclContext context,
             TypeNode type, const Token& firstName);
@@ -194,44 +179,22 @@ namespace javac
          */
         std::vector<Uptr<ParameterDecl>> parseMethodParameters();
 
+        // ======
 
-        // Parse range of codes
-        /**
-         * Parse code block start with '{' and end with '}'
-         * @throw parser_exception if the block is invalid
-         * @return parsed block statement
-         */
-        BlockStatement parseBlock();
-        /**
-       * Parse a single code statement
-       * @throw parser_exception if the statement is invalid
-       * @return parsed statement
-       */
-        Uptr<Statement> parseStatement(bool allowBlock = true);
-        Uptr<ReturnStatement> parseReturnStatement();
-        Uptr<IfStatement> parseIfStatement();
-        Uptr<SwitchStatement> parseSwitchStatement();
-        SwitchLabel parseSwitchLabel();
-        Uptr<ThrowStatement> parseThrowStatement();
 
-        Uptr<LabeledStatement> parseLabeledStatement();
-        Uptr<ContinueStatement> parseContinueStatement();
-        // This one is for extension
-        Uptr<GotoStatement> parseGotoStatement();
-        Uptr<AssertStatement> parseAssertStatement();
-        Uptr<BreakStatement> parseBreakStatement();
 
-        Uptr<SynchronizedStatement> parseSynchronizedStatement();
-        Uptr<TryStatement> parseTryStatement();
 
-        // Annotation declaration
+
+
+
+        // === Expr ===
+
         /**
          * Try parse annotations, will consume an '@' symbol token
          * @return a vector of parsed annotations or empty if nothing parsed
          */
         std::vector<Annotation> parseAnnotations();
         Annotation parseAnnotation();
-        AnnotationArg parseAnnotationArg();
 
         // Element value (value in annotation value or method default value)
         /**
@@ -245,13 +208,6 @@ namespace javac
          */
         Uptr<Expr> parseElementArray();
         Uptr<Expr> parseElementExpr();
-
-        /**
-         * Parse generic parameters for class declaration or method declaration
-         * Like "<T extends X>"
-         * @return parsed GenericParameters
-         */
-        std::vector<GenericParameter> parseGenericParameters();
 
         /**
          * Treat current token as basic literal (string, int, etc) and try to parse it
@@ -278,6 +234,91 @@ namespace javac
         * @return parsed expression
         */
         Uptr<Expr> parseValue();
+
+        // ======
+
+
+
+
+
+
+
+        // === Statement ===
+
+        /**
+         * Parse code block start with '{' and end with '}'
+         * @throw parser_exception if the block is invalid
+         * @return parsed block statement
+         */
+        BlockStatement parseBlock();
+        /**
+       * Parse a single code statement
+       * @throw parser_exception if the statement is invalid
+       * @return parsed statement
+       */
+        Uptr<Statement> parseStatement(bool allowBlock = true);
+        Uptr<ReturnStatement> parseReturnStatement();
+        Uptr<IfStatement> parseIfStatement();
+        Uptr<SwitchStatement> parseSwitchStatement();
+        Uptr<ThrowStatement> parseThrowStatement();
+
+        Uptr<LabeledStatement> parseLabeledStatement();
+        Uptr<ContinueStatement> parseContinueStatement();
+        // This one is for extension
+        Uptr<GotoStatement> parseGotoStatement();
+        Uptr<AssertStatement> parseAssertStatement();
+        Uptr<BreakStatement> parseBreakStatement();
+
+        Uptr<SynchronizedStatement> parseSynchronizedStatement();
+        Uptr<TryStatement> parseTryStatement();
+
+        // ======
+
+
+
+
+
+
+
+        // === Other syntax and compilation units ===
+
+        /**
+         * Parse a TypeNode if you are sure that from this token it is going to be a type specification
+         * Will auto proces annotations at the front
+         * When varargs is supplied, consumes and records a trailing annotated or bare ellipsis.
+         * @return TypeNode parsed
+         */
+        TypeNode parseTypeNode(std::vector<Annotation> annotations = {},
+            std::optional<ArrayDimension>* varargs = nullptr);
+
+        /**
+         * Parse a vector of ArrayDimension for type specification
+         * Annotations are automatically process, include the prefix one
+         * @return parsed ArrayDimensions or empty if nothing parsed
+         */
+        std::vector<ArrayDimension> parseArrayDimension(bool allowAnnotation = true,
+            std::optional<ArrayDimension>* varargs = nullptr);
+
+        // Parse TypeArg defined within <...>, Like "String" in "List<String>"
+        // It must be specific type or unbound, not for class generic parameter declaration
+        // By invoking this method, a Left angle bracket should be consumed, and this method won't consume the Right angle bracket
+        std::vector<TypeArg> parseTypeArgs();
+
+        std::vector<ModifierFlag> parseModifierFlags();
+        AnnotationArg parseAnnotationArg();
+        SwitchLabel parseSwitchLabel();
+
+        /**
+         * Parse generic parameters for class declaration or method declaration
+         * Like "<T extends X>"
+         * @return parsed GenericParameters
+         */
+        std::vector<GenericParameter> parseGenericParameters();
+
+
+
+
+
 
         void parseOrdinary();
         void parseModular();
