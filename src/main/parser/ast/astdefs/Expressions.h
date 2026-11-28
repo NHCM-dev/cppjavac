@@ -19,79 +19,79 @@ namespace javac
     // Arithmetic operators: +, -, *, / and %.
     enum class ArithmeticOp : std::uint8_t
     {
-        Add, // +
-        Minus, // -
-        Multiply, // *
-        Divide, // /
-        Modulo, // %
+        Add,        // +
+        Minus,      // -
+        Multiply,   // *
+        Divide,     // /
+        Modulo,     // %
     };
 
     // Increment and decrement operators: ++ and --.
     enum class IncDecOp : std::uint8_t
     {
-        PlusPlus, // ++
+        PlusPlus,   // ++
         MinusMinus, // --
     };
 
     // Simple assignment and compound assignment operators.
     enum class AssignOp : std::uint8_t
     {
-        Assign, // =
-        PlusAssign, // +=
-        MinusAssign, // -=
-        StarAssign, // *=
-        SlashAssign, // /=
-        PercentAssign, // %=
+        Assign,                     // =
+        PlusAssign,                 // +=
+        MinusAssign,                // -=
+        StarAssign,                 // *=
+        SlashAssign,                // /=
+        PercentAssign,              // %=
 
-        AmpersandAssign, // &=
-        PipeAssign, // |=
-        CaretAssign, // ^=
-        LeftShiftAssign, // <<=
-        RightShiftAssign, // >>=
-        UnsignedRightShiftAssign, // >>>=
+        AmpersandAssign,            // &=
+        PipeAssign,                 // |=
+        CaretAssign,                // ^=
+        LeftShiftAssign,            // <<=
+        RightShiftAssign,           // >>=
+        UnsignedRightShiftAssign,   // >>>=
     };
 
     // Equality and ordering operators.
     enum class CompareOp : std::uint8_t
     {
-        Equal, // ==
-        NotEqual, // !=
-        Less, // <
-        LessEqual, // <=
-        Greater, // >
-        GreaterEqual, // >=
+        Equal,          // ==
+        NotEqual,       // !=
+        Less,           // <
+        LessEqual,      // <=
+        Greater,        // >
+        GreaterEqual,   // >=
     };
 
     // Short-circuit boolean operators.
     enum class LogicalOp : std::uint8_t
     {
         And, // &&
-        Or, // ||
+        Or,  // ||
     };
 
     // Bitwise operators, also used for boolean operands.
     enum class BitwiseOp : std::uint8_t
     {
-        And, // &
-        Or, // |
-        Xor, // ^
+        And,    // &
+        Or,     // |
+        Xor,    // ^
     };
 
     // Signed and unsigned bit-shift operators.
     enum class ShiftOp : std::uint8_t
     {
-        Left, // <<
-        Right, // >>
-        UnsignedRight, // >>>
+        Left,           // <<
+        Right,          // >>
+        UnsignedRight,  // >>>
     };
 
     // Unary sign, boolean negation and bitwise complement.
     enum class UnaryOp : std::uint8_t
     {
-        Plus, // +
-        Minus, // -
-        Not, // !
-        Complement, // ~
+        Plus,           // +
+        Minus,          // -
+        Not,            // !
+        Complement,     // ~
     };
 
     // Common left and right operands of a binary expression.

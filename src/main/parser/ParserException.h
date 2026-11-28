@@ -87,6 +87,7 @@ namespace javac
 
         InvalidNumberLiteral,
         InvalidExactGeneric,
+        InvalidClassInstanceCreationType,
         InvalidThrowsType,
         InvalidAnnotationElementType,
         InvalidClassMember,

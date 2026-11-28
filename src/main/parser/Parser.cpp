@@ -101,7 +101,7 @@ namespace javac
     }
 
     TypeNode Parser::parseTypeNode(std::vector<Annotation> leadingAnnotations,
-        std::optional<ArrayDimension>* varargs)
+        std::optional<ArrayDimension>* varargs, bool allowDiamond)
     {
         TypeNode node;
         const auto finishType = [this, &node, varargs]() -> TypeNode
@@ -158,6 +158,13 @@ namespace javac
             if (matchSymbol(SymbolType::LAngleBracket))
             {
                 node.objectType = ObjectType::GenericClass;
+                if (allowDiamond && checkSymbol(SymbolType::RAngleBracket)
+                    && peek(1).symbol == SymbolType::LParen)
+                {
+                    advance();
+                    node.nameParts.push_back(std::move(namePart));
+                    return node;
+                }
                 namePart.typeArguments = parseTypeArgs();
                 expectTypeClose();
             }

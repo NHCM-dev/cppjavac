@@ -285,12 +285,6 @@ namespace javac
         return finishType();
     }
 
-    Uptr<Expr> Parser::parseConstantValue()
-    {
-        //TODO: implement
-        throw parser_exception(ParserExceptionType::UnsupportedExpression, peek());
-    }
-
     Uptr<Expr> Parser::parseStatementExpression()
     {
         const Token start = peek();
@@ -325,9 +319,215 @@ namespace javac
         return array;
     }
 
-    Uptr<Expr> Parser::parseValue()
+    Uptr<Expr> Parser::parseConstantValue()
     {
         //TODO: implement
         throw parser_exception(ParserExceptionType::UnsupportedExpression, peek());
     }
+
+    Uptr<Expr> Parser::parseValue()
+    {
+        //TODO: implement
+
+        if (checkSymbol(SymbolType::LParen))
+        {
+            return parseParenExpr();
+        }
+
+
+    }
+
+    Uptr<Expr> parseSingleVariable()
+    {
+
+    }
+
+    Uptr<BinaryExpr> Parser::parseBinaryExpr()
+    {
+
+    }
+
+
+    Uptr<ArithmeticExpr> Parser::parseAdd()
+    {
+
+    }
+
+    Uptr<ArithmeticExpr> Parser::parseMinus()
+    {
+
+    }
+
+    Uptr<ArithmeticExpr> Parser::parseMultiply()
+    {
+
+    }
+
+    Uptr<ArithmeticExpr> Parser::parseSubtract()
+    {
+
+    }
+
+    Uptr<ArithmeticExpr> Parser::parseModulo()
+    {
+
+    }
+
+
+    Uptr<UnaryExpr> Parser::parseUnaryExpr()
+    {
+
+    }
+
+    Uptr<NameExpr> Parser::parseNameExpr()
+    {
+        Uptr<NameExpr> expr = makeUniq<NameExpr>();
+        expr->name = expectIdentifier().content;
+        return expr;
+    }
+
+    Uptr<ParenExpr> Parser::parseParenExpr()
+    {
+        Uptr<ParenExpr> expr = makeUniq<ParenExpr>();
+
+        expectSymbol(SymbolType::LParen);
+        if (checkSymbol(SymbolType::RParen))
+        {
+            throw parser_exception(ParserExceptionType::UnsupportedExpression, peek());
+        }
+        expr->expression = parseValue();
+        expectSymbol(SymbolType::RParen);
+
+        return expr;
+    }
+
+    Uptr<ThisExpr> Parser::parseThisExpr(std::u16string qualifier)
+    {
+        expectKeyword(THIS);
+        Uptr<ThisExpr> expr = makeUniq<ThisExpr>();
+        expr->qualifier = std::move(qualifier);
+        return expr;
+    }
+
+    Uptr<SuperExpr> Parser::parseSuperExpr(std::u16string qualifier)
+    {
+        expectKeyword(SUPER);
+        Uptr<SuperExpr> expr = makeUniq<SuperExpr>();
+        expr->qualifier = std::move(qualifier);
+        return expr;
+    }
+
+    Uptr<FieldAccessExpr> Parser::parseFieldAccessExpr(Uptr<Expr> receiver)
+    {
+        Uptr<FieldAccessExpr> expr = makeUniq<FieldAccessExpr>();
+
+        expr->receiver = std::move(receiver);
+
+        expectSymbol(SymbolType::Dot);
+
+        expr->name = expectIdentifier().content;
+
+        return expr;
+    }
+
+    Uptr<ArrayAccessExpr> Parser::parseArrayAccessExpr(Uptr<Expr> arrayExpr)
+    {
+        Uptr<ArrayAccessExpr> expr = makeUniq<ArrayAccessExpr>();
+
+        expr->arrayExpr = std::move(arrayExpr);
+
+        expectSymbol(SymbolType::LBracket);
+
+        expr->indexExpr = parseValue();
+
+        expectSymbol(SymbolType::RBracket);
+
+        return expr;
+    }
+
+    Uptr<CallExpr> Parser::parseCallExpr(Uptr<Expr> callee, std::vector<TypeNode> typeArguments)
+    {
+        Uptr<CallExpr> expr = makeUniq<CallExpr>();
+
+        expr->callee = std::move(callee);
+        expr->typeArguments = std::move(typeArguments);
+
+        expectSymbol(SymbolType::LParen);
+        if (matchSymbol(SymbolType::RParen))
+        {
+            return expr;
+        }
+
+        do
+        {
+            expr->arguments.push_back(parseValue());
+        } while (matchSymbol(SymbolType::Comma));
+
+        expectSymbol(SymbolType::RParen);
+
+        return expr;
+    }
+
+    Uptr<NewExpr> Parser::parseNewExpr(Uptr<Expr> qualifier)
+    {
+        expectKeyword(NEW);
+
+        Uptr<NewExpr> expr = makeUniq<NewExpr>();
+
+        expr->qualifier = std::move(qualifier);
+        if (matchSymbol(SymbolType::LAngleBracket))
+        {
+            do
+            {
+                const Token argumentStart = peek();
+                auto argument = parseTypeNode();
+                if (!jcutils::canGeneric(argument))
+                {
+                    throw parser_exception(ParserExceptionType::InvalidExactGeneric, argumentStart);
+                }
+                expr->typeArguments.push_back(std::move(argument));
+            } while (matchSymbol(SymbolType::Comma));
+            expectTypeClose();
+        }
+
+        const Token typeStart = peek();
+        expr->type = parseTypeNode({}, nullptr, expr->typeArguments.empty());
+        if (!jcutils::isActualClass(expr->type))
+        {
+            throw parser_exception(ParserExceptionType::InvalidClassInstanceCreationType, typeStart);
+        }
+        for (const auto& part : expr->type.nameParts)
+        {
+            if (&part != &expr->type.nameParts.back() && !part.typeArguments.empty())
+            {
+                throw parser_exception(ParserExceptionType::InvalidClassInstanceCreationType, typeStart);
+            }
+            for (const auto& argument : part.typeArguments)
+            {
+                if (argument.genericType != GenericType::Exact)
+                {
+                    throw parser_exception(ParserExceptionType::InvalidClassInstanceCreationType, typeStart);
+                }
+            }
+        }
+
+        expectSymbol(SymbolType::LParen);
+        if (!checkSymbol(SymbolType::RParen))
+        {
+            do
+            {
+                expr->arguments.push_back(parseValue());
+            } while (matchSymbol(SymbolType::Comma));
+        }
+        expectSymbol(SymbolType::RParen);
+
+        if (matchSymbol(SymbolType::LBrace))
+        {
+            //TODO: implement new Class(){} initialization
+            expectSymbol(SymbolType::RBrace);
+            expr->members.emplace();
+        }
+        return expr;
+    }
+
 } // javac

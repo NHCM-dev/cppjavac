@@ -250,6 +250,16 @@ namespace javac
         Uptr<ClassLiteralExpr> parseClassLiteral();
 
         /**
+         * Parse one statement expression: an assignment, an increment or decrement,
+         * a method invocation, or a class instance creation expression.
+         * Leave the following semicolon, comma or right parenthesis for the caller.
+         * @throws parser_exception if the expression is invalid or cannot be used as a statement
+         * @return parsed expression
+         */
+        Uptr<Expr> parseStatementExpression();
+        Uptr<Expr> parseVariableInitializer();
+
+        /**
          * A value which can be confirmed during compile time
          * Such as number, enum, static final value, Java17+: string, null.
          * Does not include method call, annotation etc
@@ -261,15 +271,72 @@ namespace javac
         * @return parsed expression
         */
         Uptr<Expr> parseValue();
+
+        Uptr<BinaryExpr> parseBinaryExpr();
+
+        Uptr<ArithmeticExpr> parseAdd();
+        Uptr<ArithmeticExpr> parseMinus();
+        Uptr<ArithmeticExpr> parseMultiply();
+        Uptr<ArithmeticExpr> parseSubtract();
+        Uptr<ArithmeticExpr> parseModulo();
+
+        Uptr<UnaryExpr> parseUnaryExpr();
+
         /**
-         * Parse one statement expression: an assignment, an increment or decrement,
-         * a method invocation, or a class instance creation expression.
-         * Leave the following semicolon, comma or right parenthesis for the caller.
-         * @throws parser_exception if the expression is invalid or cannot be used as a statement
-         * @return parsed expression
+         * Parse current token as a identifier
+         * @return parsed name expression
          */
-        Uptr<Expr> parseStatementExpression();
-        Uptr<Expr> parseVariableInitializer();
+        Uptr<NameExpr> parseNameExpr();
+        /**
+         * Parse an expression quoted with (), current token is expected to be '('.
+         * It is required to have a value within the parenthesis
+         * @throw parser_exception if there is nothing inside the parenthesis
+         * @return parsed parenthesis expression
+         */
+        Uptr<ParenExpr> parseParenExpr();
+        /**
+         * Parse a this expression by consuming the current 'this' token.
+         * @param qualifier enclosing type name already parsed by the caller, or empty for bare this
+         * @return parsed this expression
+         */
+        Uptr<ThisExpr> parseThisExpr(std::u16string qualifier = {});
+        /**
+         * Parse a super reference by consuming the current 'super' token.
+         * @param qualifier type name already parsed by the caller, or empty for bare super
+         * @return parsed super reference
+         */
+        Uptr<SuperExpr> parseSuperExpr(std::u16string qualifier = {});
+        /**
+         * Parse a field access expression after its receiver has been parsed.
+         * By calling this function, current token is expected to be at '.'.
+         * @param receiver resolved owner reference, such as a ThisExpr / NameExpr etc
+         * @return parsed field access expression
+         */
+        Uptr<FieldAccessExpr> parseFieldAccessExpr(Uptr<Expr> receiver);
+        /**
+         * Parse an array access expression when its reference is resolved already.
+         * By calling this function, current token is expected to be at '['.
+         * @param arrayExpr resolved array reference, such as a NameExpr / FieldAccessExpr etc
+         * @return parsed array access expression
+         */
+        Uptr<ArrayAccessExpr> parseArrayAccessExpr(Uptr<Expr> arrayExpr);
+        /**
+         * Parse a method call expression when its callee and generics are resolved already.
+         * By calling this function, current token is expected to be at '('.
+         * @param callee resolved callee, such as a NameExpr / FieldAccessExpr etc
+         * @param typeArguments resolved generic specified for this call
+         * @return parsed call expression
+         */
+        Uptr<CallExpr> parseCallExpr(Uptr<Expr> callee, std::vector<TypeNode> typeArguments = {});
+        /**
+         * Parse a new expression when its qualifier is resolved already.
+         * The current token must be 'new'. For a qualified creation such as outer.new Inner(),
+         * the caller consumes the qualifier and the dot first.
+         * @throw parser_exception if the class being initialized have invalid generic or invalid type
+         * @param qualifier parsed enclosing instance expression, or nullptr for an unqualified creation
+         * @return parsed class instance creation expression
+         */
+        Uptr<NewExpr> parseNewExpr(Uptr<Expr> qualifier);
 
         // ======
 
@@ -299,7 +366,6 @@ namespace javac
         Uptr<Statement> parseStatement(jcutils::StatementContext context);
 
         Uptr<ReturnStatement> parseReturnStatement();
-
         Uptr<IfStatement> parseIfStatement();
         Uptr<WhileStatement> parseWhileStatement();
         Uptr<DoWhileStatement> parseDoWhileStatement();
@@ -340,7 +406,7 @@ namespace javac
          * @return TypeNode parsed
          */
         TypeNode parseTypeNode(std::vector<Annotation> annotations = {},
-            std::optional<ArrayDimension>* varargs = nullptr);
+            std::optional<ArrayDimension>* varargs = nullptr, bool allowDiamond = false);
 
         /**
          * Parse a vector of ArrayDimension for type specification
