@@ -338,6 +338,18 @@ namespace javac
          */
         Uptr<NewExpr> parseNewExpr(Uptr<Expr> qualifier);
 
+        Uptr<ArrayInitializerExpr> parseArrayInitializerExpr();
+
+        Uptr<ArrayDimensionExpr> parseArrayDimensionExpr(std::vector<Annotation> annotations = {});
+
+        /**
+         * Parse an array creation expression starting at 'new'.
+         * Consume the element type, annotated or unannotated dimensions, and any initializer.
+         * @throws parser_exception if the element type, dimensions or initializer are invalid
+         * @return parsed array creation expression
+         */
+        Uptr<NewArrayExpr> parseNewArrayExpr();
+
         // ======
 
 
@@ -400,13 +412,15 @@ namespace javac
         // === Other syntax and compilation units ===
 
         /**
-         * Parse a TypeNode if you are sure that from this token it is going to be a type specification
-         * Will auto proces annotations at the front
-         * When varargs is supplied, consumes and records a trailing annotated or bare ellipsis.
+         * Parse a TypeNode if you are sure that from this token it is going to be a type specification.
+         * Will auto proces annotations at the front.
+         * With array parsing enabled, a supplied varargs parameter records a trailing annotated or bare ellipsis.
+         * @param allowArray whether to consume trailing array dimensions or varargs. If false, leaves them and their annotations for the caller.
          * @return TypeNode parsed
          */
         TypeNode parseTypeNode(std::vector<Annotation> annotations = {},
-            std::optional<ArrayDimension>* varargs = nullptr, bool allowDiamond = false);
+            std::optional<ArrayDimension>* varargs = nullptr,
+            bool allowDiamond = false, bool allowArray = true);
 
         /**
          * Parse a vector of ArrayDimension for type specification

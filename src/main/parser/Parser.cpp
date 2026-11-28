@@ -101,11 +101,16 @@ namespace javac
     }
 
     TypeNode Parser::parseTypeNode(std::vector<Annotation> leadingAnnotations,
-        std::optional<ArrayDimension>* varargs, bool allowDiamond)
+        std::optional<ArrayDimension>* varargs, bool allowDiamond, bool allowArray)
     {
         TypeNode node;
-        const auto finishType = [this, &node, varargs]() -> TypeNode
+        const auto finishType = [this, &node, varargs, allowArray]() -> TypeNode
         {
+            if (!allowArray)
+            {
+                return std::move(node);
+            }
+
             std::vector<ArrayDimension> dimensions = parseArrayDimension(true, varargs);
             if (dimensions.empty())
             {

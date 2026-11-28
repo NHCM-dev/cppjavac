@@ -32,6 +32,8 @@ namespace javac
         ExpectRParenOrSemicolon,
         ExpectAssign,
         ExpectInitializerForInferredVar,
+        ExpectCatchOrFinally,
+        ExpectStatementExpression,
 
         MultipleExtends,
         MultipleImplements,
@@ -71,16 +73,13 @@ namespace javac
         ModifierNotAllowedForField,
         ModifierNotAllowedForMethod,
         ModifierNotAllowedForConstructor,
+        ModifierNotAllowedForCatchParameter,
+        ModifierNotAllowedForLocalVariable,
 
         ConflictingAccessModifiers,
         ConflictingClassModifiers,
         ConflictingFieldModifiers,
         ConflictingMethodModifiers,
-        AbstractMethodInNonAbstractClass,
-
-        ConstructorNotAllowedInContext,
-
-        ReceiverParameterNotAllowed,
 
         TypeParametersNotAllowedForAnnotationElement,
         TypeParametersNotAllowedForField,
@@ -88,30 +87,40 @@ namespace javac
         InvalidNumberLiteral,
         InvalidExactGeneric,
         InvalidClassInstanceCreationType,
+        InvalidArrayCreationType,
+        SizedDimensionAfterUnsizedDimension,
+        ArrayInitializerWithSizedDimension,
+        ExpectArrayInitializer,
         InvalidThrowsType,
         InvalidAnnotationElementType,
         InvalidClassMember,
         InvalidSwitchLabel,
+        InvalidInferredVariableDeclaration,
 
         UnsupportedParameterDefault,
         UnsupportedMemberTypeDeclaration,
         UnsupportedFieldInitializer,
         UnsupportedStatement,
         UnsupportedExpression,
-        ModifierNotAllowedForCatchParameter,
-        ExpectCatchOrFinally,
         UnsupportedElementExpression,
 
+        ConstructorNotAllowedInContext,
+
+        ReceiverParameterNotAllowed,
+
+        AbstractMethodInNonAbstractClass,
+
         InterfaceFieldRequiresInitializer,
+
         ConstructorNameMismatch,
+        ConstructorInAnonymousClass,
+        StaticMemberInAnonymousClassBeforeJava16,
 
         StaticInitializerInMemberClass,
 
         ArrowColonMixUseInSwitch,
-        ModifierNotAllowedForLocalVariable,
+
         InitializerNotAllowedForEnhancedFor,
-        ExpectStatementExpression,
-        InvalidInferredVariableDeclaration,
     };
 
     class parser_exception : public std::logic_error

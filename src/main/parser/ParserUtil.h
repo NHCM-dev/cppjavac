@@ -57,6 +57,7 @@ namespace jcutils
     {
         TopLevel,
         Member,
+        Anonymous,
         WithinInterface, // Member class declared in an interface.
         WithinAnnotation, // Member class declared in an annotation interface.
         Local

@@ -523,10 +523,108 @@ namespace javac
 
         if (matchSymbol(SymbolType::LBrace))
         {
-            //TODO: implement new Class(){} initialization
+            auto& members = expr->members.emplace();
+
+            while (Uptr<Decl> member = parseNormalClassMember({},
+                jcutils::ClassDeclContext::Anonymous,
+                jcutils::MethodDeclContext::Normal))
+            {
+                members.push_back(std::move(member));
+            }
+
             expectSymbol(SymbolType::RBrace);
-            expr->members.emplace();
         }
+        return expr;
+    }
+
+    Uptr<ArrayInitializerExpr> Parser::parseArrayInitializerExpr()
+    {
+        Uptr<ArrayInitializerExpr> expr = makeUniq<ArrayInitializerExpr>();
+
+        expectSymbol(SymbolType::LBrace);
+        if (!checkSymbol(SymbolType::RBrace) && !matchSymbol(SymbolType::Comma))
+        {
+            do
+            {
+                if (checkSymbol(SymbolType::LBrace))
+                {
+                    expr->elements.push_back(parseArrayInitializerExpr());
+                }
+                else
+                {
+                    expr->elements.push_back(parseValue());
+                }
+            } while (matchSymbol(SymbolType::Comma) && !checkSymbol(SymbolType::RBrace));
+        }
+        expectSymbol(SymbolType::RBrace);
+
+        return expr;
+    }
+
+    Uptr<ArrayDimensionExpr> Parser::parseArrayDimensionExpr(std::vector<Annotation> annotations)
+    {
+        Uptr<ArrayDimensionExpr> expr = makeUniq<ArrayDimensionExpr>();
+
+        expr->annotations = std::move(annotations);
+
+        expectSymbol(SymbolType::LBracket);
+        if (matchSymbol(SymbolType::RBracket))
+        {
+            return expr;
+        }
+        expr->sizeExpr = parseValue();
+        expectSymbol(SymbolType::RBracket);
+
+        return expr;
+    }
+
+    Uptr<NewArrayExpr> Parser::parseNewArrayExpr()
+    {
+        Uptr<NewArrayExpr> expr = makeUniq<NewArrayExpr>();
+
+        expectKeyword(NEW);
+
+        const Token typeStart = peek();
+        expr->elementType = parseTypeNode({}, nullptr, false, false);
+        if (expr->elementType.objectType != ObjectType::Primitive && !jcutils::isActualClass(expr->elementType))
+        {
+            throw parser_exception(ParserExceptionType::InvalidArrayCreationType, typeStart);
+        }
+
+        bool hasSizedDimension = false;
+        bool hasUnsizedDimension = false;
+        do
+        {
+            std::vector<Annotation> annotations = parseAnnotations();
+            const Token dimensionStart = peek();
+            if (hasUnsizedDimension && checkSymbol(SymbolType::LBracket)
+                && peek(1).symbol != SymbolType::RBracket)
+            {
+                throw parser_exception(ParserExceptionType::SizedDimensionAfterUnsizedDimension, dimensionStart);
+            }
+
+            Uptr<ArrayDimensionExpr> dimension = parseArrayDimensionExpr(std::move(annotations));
+            hasSizedDimension |= static_cast<bool>(dimension->sizeExpr);
+            hasUnsizedDimension |= !dimension->sizeExpr;
+            expr->dimensions.push_back(std::move(*dimension));
+        } while (checkSymbol(SymbolType::LBracket) || canBeAnnotation());
+
+        if (hasSizedDimension)
+        {
+            if (checkSymbol(SymbolType::LBrace))
+            {
+                throw parser_exception(ParserExceptionType::ArrayInitializerWithSizedDimension, peek());
+            }
+        }
+        else
+        {
+            if (!checkSymbol(SymbolType::LBrace))
+            {
+                throw parser_exception(ParserExceptionType::ExpectArrayInitializer, peek());
+            }
+            expr->initializer = parseArrayInitializerExpr();
+        }
+
         return expr;
     }
 

@@ -168,11 +168,18 @@ namespace javac
             return nullptr;
         }
         
+        const bool isAnonymous = classContext == jcutils::ClassDeclContext::Anonymous;
+        const bool restrictAnonymousStatics = isAnonymous && !langLevelMeet(LangLevel::Sixteen);
+
         // Try parse initializer such as static block
         bool isStatic = checkKeyword(STATIC) && peek(1).symbol == SymbolType::LBrace;
         if (isStatic)
         {
-            if (classContext != jcutils::ClassDeclContext::TopLevel)
+            if (restrictAnonymousStatics)
+            {
+                throw parser_exception(ParserExceptionType::StaticMemberInAnonymousClassBeforeJava16, peek());
+            }
+            if (!isAnonymous && classContext != jcutils::ClassDeclContext::TopLevel)
             {
                 throw parser_exception(ParserExceptionType::StaticInitializerInMemberClass, peek());
             }
@@ -186,10 +193,15 @@ namespace javac
         // Collect annotations
         // Parse modifier flags
         std::vector<ModifierFlag> modifiers = parseModifierFlags();
+        const bool restrictedStatic = restrictAnonymousStatics && jcutils::haveModifier(modifiers, FlagType::Static);
 
         // Check for class
         if (checkKeyword(CLASS))
         {
+            if (restrictedStatic)
+            {
+                throw parser_exception(ParserExceptionType::StaticMemberInAnonymousClassBeforeJava16, peek());
+            }
             return makeUniq<ClassDecl>(parseClassDecl(std::move(modifiers), jcutils::ClassDeclContext::Member));
         }
         //TODO: Check for interface
@@ -213,6 +225,10 @@ namespace javac
         if (checkIdentifier() && peek(1).symbol == SymbolType::LParen)
         {
             const Token& name = expectIdentifier();
+            if (isAnonymous)
+            {
+                throw parser_exception(ParserExceptionType::ConstructorInAnonymousClass, name);
+            }
             if (name.content != className)
             {
                 throw parser_exception(ParserExceptionType::ConstructorNameMismatch, name);
@@ -230,6 +246,10 @@ namespace javac
         // '(' means is a method
         if (checkSymbol(SymbolType::LParen))
         {
+            if (restrictedStatic)
+            {
+                throw parser_exception(ParserExceptionType::StaticMemberInAnonymousClassBeforeJava16, name);
+            }
             return makeUniq<MethodDecl>(
                 parseMethodDecl(std::move(modifiers),
                     methodContext,
@@ -278,12 +298,24 @@ namespace javac
 
         fieldDecl.type = std::move(type);
 
+        const bool requiresConstantInitializer = context == jcutils::ClassDeclContext::Anonymous
+            && !langLevelMeet(LangLevel::Sixteen) && jcutils::haveModifier(fieldDecl.modifiers, FlagType::Static);
+        if (requiresConstantInitializer && !jcutils::haveModifier(fieldDecl.modifiers, FlagType::Final))
+        {
+            throw parser_exception(ParserExceptionType::StaticMemberInAnonymousClassBeforeJava16, firstName);
+        }
+
         const Token* name = &firstName;
         while (true)
         {
             VariableDeclarator variableDeclarator;
             variableDeclarator.name = name->content;
             variableDeclarator.dimensions = parseArrayDimension();
+            if (requiresConstantInitializer && (fieldDecl.type.objectType == ObjectType::Array
+                || !variableDeclarator.dimensions.empty() || !checkSymbol(SymbolType::Assign)))
+            {
+                throw parser_exception(ParserExceptionType::StaticMemberInAnonymousClassBeforeJava16, *name);
+            }
             if (checkSymbol(SymbolType::Assign))
             {
                 //TODO: implement parse initializer
