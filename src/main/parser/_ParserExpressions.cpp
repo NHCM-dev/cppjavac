@@ -628,4 +628,150 @@ namespace javac
         return expr;
     }
 
+    Uptr<CastExpr> Parser::parseCastExpr()
+    {
+        Uptr<CastExpr> expr = makeUniq<CastExpr>();
+
+        expectSymbol(SymbolType::LParen);
+        const Token& start = peek();
+        if (matchSymbol(SymbolType::RParen))
+        {
+            throw parser_exception(ParserExceptionType::ExpectTypeSpecification, start);
+        }
+
+        expr->castType = parseTypeNode(parseAnnotations());
+
+        while (matchSymbol(SymbolType::Comma))
+        {
+            expr->additionalBounds.push_back(parseTypeNode(parseAnnotations()));
+        }
+        expectSymbol(SymbolType::RParen);
+
+        expr->value = parseValue();
+
+        return expr;
+    }
+
+    Uptr<InstanceOfExpr> Parser::parseInstanceOfExpr(Uptr<Expr> value)
+    {
+        expectKeyword(INSTANCEOF);
+        Uptr<InstanceOfExpr> expr = makeUniq<InstanceOfExpr>();
+        expr->value = std::move(value);
+        expr->pattern = parseInstanceOfPattern(&expr->testType);
+        return expr;
+    }
+
+    Uptr<Pattern> Parser::parseInstanceOfPattern(std::optional<TypeNode>* testType)
+    {
+        const Token start = peek();
+        const bool isComponent = testType == nullptr;
+        const bool allowUnnamedPatterns = langLevelMeet(LangLevel::TwentyFive);
+        if (isComponent && allowUnnamedPatterns && matchKeyword(UNDERSCORE))
+        {
+            return makeUniq<UnnamedPattern>();
+        }
+
+        std::vector<ModifierFlag> modifiers = parseModifierFlags();
+        bool hasFinal = false;
+        for (const auto& modifier : modifiers)
+        {
+            if (modifier.flagType)
+            {
+                if (hasFinal || modifier.flagType != FlagType::Final)
+                {
+                    throw parser_exception(ParserExceptionType::InvalidPattern, modifier.range);
+                }
+                hasFinal = true;
+            }
+        }
+
+        TypeNode type;
+        if (matchKeyword(VAR))
+        {
+            if (!isComponent)
+            {
+                throw parser_exception(ParserExceptionType::InvalidInstanceOfType, start);
+            }
+            type.objectType = ObjectType::Inferred;
+        }
+        else
+        {
+            type = parseTypeNode();
+        }
+        if (type.objectType == ObjectType::Void || (!isComponent && !jcutils::canGeneric(type)))
+        {
+            throw parser_exception(ParserExceptionType::InvalidInstanceOfType, start);
+        }
+
+        if (langLevelMeet(LangLevel::TwentyOne) && checkSymbol(SymbolType::LParen))
+        {
+            if (!modifiers.empty() || !jcutils::isActualClass(type))
+            {
+                throw parser_exception(ParserExceptionType::InvalidPattern, start);
+            }
+            for (const auto& part : type.nameParts)
+            {
+                if (!part.annotations.empty())
+                {
+                    throw parser_exception(ParserExceptionType::InvalidPattern, start);
+                }
+            }
+
+            advance();
+            Uptr<RecordPattern> pattern = makeUniq<RecordPattern>();
+            pattern->type = std::move(type);
+            if (!checkSymbol(SymbolType::RParen))
+            {
+                do
+                {
+                    pattern->components.push_back(parseInstanceOfPattern());
+                } while (matchSymbol(SymbolType::Comma));
+            }
+            expectSymbol(SymbolType::RParen);
+            return pattern;
+        }
+
+        const bool unnamedBinding = allowUnnamedPatterns && checkKeyword(UNDERSCORE);
+        if (langLevelMeet(LangLevel::Sixteen) && (unnamedBinding || checkIdentifier() || isComponent))
+        {
+            auto pattern = makeUniq<TypePattern>();
+            pattern->modifiers = std::move(modifiers);
+            pattern->type = std::move(type);
+            pattern->name = unnamedBinding ? advance().content : expectIdentifier().content;
+            if (checkSymbol(SymbolType::LBracket) || canBeAnnotation() || checkSymbol(SymbolType::Assign))
+            {
+                throw parser_exception(ParserExceptionType::InvalidPattern, peek());
+            }
+            return pattern;
+        }
+
+        if (hasFinal)
+        {
+            throw parser_exception(ParserExceptionType::InvalidPattern, start);
+        }
+        TypeNode& baseType = type.objectType == ObjectType::Array ? *type.elementType : type;
+        std::vector<Annotation>& annotations = jcutils::isActualClass(baseType) ? baseType.nameParts.front().annotations : baseType.annotations;
+        for (auto& modifier : modifiers)
+        {
+            annotations.push_back(std::move(*modifier.annotation));
+        }
+        testType->emplace(std::move(type));
+        return nullptr;
+    }
+
+    Uptr<LambdaExpr> Parser::parseLambdaExpr()
+    {
+
+    }
+
+    Uptr<MethodRefExpr> Parser::parseMethodRefExpr()
+    {
+
+    }
+
+    Uptr<SwitchExpr> Parser::parseSwitchExpr()
+    {
+
+    }
+
 } // javac

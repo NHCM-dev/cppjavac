@@ -34,6 +34,7 @@ namespace javac
         ExpectInitializerForInferredVar,
         ExpectCatchOrFinally,
         ExpectStatementExpression,
+        ExpectTypeSpecification,
 
         MultipleExtends,
         MultipleImplements,
@@ -88,6 +89,8 @@ namespace javac
         InvalidExactGeneric,
         InvalidClassInstanceCreationType,
         InvalidArrayCreationType,
+        InvalidInstanceOfType,
+        InvalidPattern,
         SizedDimensionAfterUnsizedDimension,
         ArrayInitializerWithSizedDimension,
         ExpectArrayInitializer,

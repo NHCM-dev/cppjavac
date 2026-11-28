@@ -337,11 +337,8 @@ namespace javac
          * @return parsed class instance creation expression
          */
         Uptr<NewExpr> parseNewExpr(Uptr<Expr> qualifier);
-
         Uptr<ArrayInitializerExpr> parseArrayInitializerExpr();
-
         Uptr<ArrayDimensionExpr> parseArrayDimensionExpr(std::vector<Annotation> annotations = {});
-
         /**
          * Parse an array creation expression starting at 'new'.
          * Consume the element type, annotated or unannotated dimensions, and any initializer.
@@ -349,6 +346,19 @@ namespace javac
          * @return parsed array creation expression
          */
         Uptr<NewArrayExpr> parseNewArrayExpr();
+        Uptr<CastExpr> parseCastExpr();
+        /**
+         * Parse 'instanceof' and its type or pattern, leaving the following token for the caller.
+         * @param value parsed left operand
+         * @throws parser_exception if the type or pattern is invalid
+         * @return parsed instanceof expression
+         */
+        Uptr<InstanceOfExpr> parseInstanceOfExpr(Uptr<Expr> value);
+        Uptr<Pattern> parseInstanceOfPattern(std::optional<TypeNode>* testType = nullptr);
+        Uptr<LambdaExpr> parseLambdaExpr();
+        Uptr<MethodRefExpr> parseMethodRefExpr();
+        Uptr<SwitchExpr> parseSwitchExpr();
+
 
         // ======
 
