@@ -355,8 +355,29 @@ namespace javac
          */
         Uptr<InstanceOfExpr> parseInstanceOfExpr(Uptr<Expr> value);
         Uptr<Pattern> parseInstanceOfPattern(std::optional<TypeNode>* testType = nullptr);
+        /**
+         * Parse a lambda starting at its parameter name or opening parenthesis.
+         * The caller identifies the lambda before calling this function.
+         * @throws parser_exception if the parameters, arrow or body are invalid
+         * @return parsed lambda with either an expression body or a block body
+         */
         Uptr<LambdaExpr> parseLambdaExpr();
-        Uptr<MethodRefExpr> parseMethodRefExpr();
+        /**
+         * Parse a method reference starting at '::', after its qualifier has been parsed.
+         * Supply exactly one of the expression qualifier and the type qualifier.
+         * @param exprQualifier parsed expression or unresolved name before '::'
+         * @param typeQualifier parsed type before '::'
+         * @throws parser_exception if the qualifier, type arguments or target are invalid
+         * @return parsed method or constructor reference
+         */
+        Uptr<MethodRefExpr> parseMethodRefExpr(Uptr<Expr> exprQualifier,
+            std::optional<TypeNode> typeQualifier = std::nullopt);
+        /**
+         * Parse a switch expression starting at 'switch', including its selector and cases.
+         * Consume the closing brace of the switch body.
+         * @throws parser_exception if the selector or switch body is invalid
+         * @return parsed switch expression
+         */
         Uptr<SwitchExpr> parseSwitchExpr();
 
 
@@ -395,6 +416,7 @@ namespace javac
         Uptr<EnhancedForStatement> parseEnhancedForStatement();
 
         Uptr<SwitchStatement> parseSwitchStatement();
+        std::vector<SwitchCase> parseSwitchCases(SourceRange& range);
 
         Uptr<ThrowStatement> parseThrowStatement();
         Uptr<LabeledStatement> parseLabeledStatement();

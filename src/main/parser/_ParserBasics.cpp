@@ -106,7 +106,7 @@ namespace javac
             return;
         }
 
-        const auto& token = peek();
+        const Token& token = peek();
         if (token.symbol && token.content.size() > 1 && token.content.front() == u'>')
         {
             if (const auto symbol = findSymbol(std::u16string_view(token.content).substr(1)))

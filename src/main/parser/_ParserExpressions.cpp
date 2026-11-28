@@ -1,5 +1,6 @@
 #include "Parser.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "ParserException.h"
@@ -333,12 +334,6 @@ namespace javac
         {
             return parseParenExpr();
         }
-
-
-    }
-
-    Uptr<Expr> parseSingleVariable()
-    {
 
     }
 
@@ -761,17 +756,129 @@ namespace javac
 
     Uptr<LambdaExpr> Parser::parseLambdaExpr()
     {
+        Uptr<LambdaExpr> expr = makeUniq<LambdaExpr>();
 
+        const auto readInferredParameter = [this, &expr]
+        {
+            Uptr<ParameterDecl> parameter = makeUniq<ParameterDecl>();
+            parameter->name = expectIdentifier().content;
+            expr->parameters.push_back(std::move(parameter));
+        };
+
+        if (!matchSymbol(SymbolType::LParen))
+        {
+            // x -> ...
+            readInferredParameter();
+        }
+        else if (!matchSymbol(SymbolType::RParen))
+        {
+            if (checkIdentifier()
+                && (peek(1).symbol == SymbolType::Comma
+                    || peek(1).symbol == SymbolType::RParen))
+            {
+                // (x) -> ... or (x, y) -> ...
+                do
+                {
+                    readInferredParameter();
+                } while (matchSymbol(SymbolType::Comma));
+
+                expectSymbol(SymbolType::RParen);
+            }
+            else
+            {
+                // (int x, String y) -> ...
+                expr->parameters = parseMethodParameters();
+            }
+        }
+
+        expectSymbol(SymbolType::Arrow);
+        if (checkSymbol(SymbolType::LBrace))
+        {
+            expr->blockBody = parseBlock();
+        }
+        else
+        {
+            expr->exprBody = parseValue();
+        }
+
+        return expr;
     }
 
-    Uptr<MethodRefExpr> Parser::parseMethodRefExpr()
+    Uptr<MethodRefExpr> Parser::parseMethodRefExpr(Uptr<Expr> exprQualifier, std::optional<TypeNode> typeQualifier)
     {
+        const Token start = expectSymbol(SymbolType::DoubleColon);
+        if (static_cast<bool>(exprQualifier) == typeQualifier.has_value()
+            || (typeQualifier && !jcutils::canGeneric(*typeQualifier)))
+        {
+            throw parser_exception(ParserExceptionType::InvalidMethodReference, start);
+        }
 
+        Uptr<MethodRefExpr> expr = makeUniq<MethodRefExpr>();
+        expr->exprQualifier = std::move(exprQualifier);
+        expr->typeQualifier = std::move(typeQualifier);
+
+        if (matchSymbol(SymbolType::LAngleBracket))
+        {
+            do
+            {
+                const Token argumentStart = peek();
+                TypeNode argument = parseTypeNode();
+                if (!jcutils::canGeneric(argument))
+                {
+                    throw parser_exception(ParserExceptionType::InvalidExactGeneric, argumentStart);
+                }
+                expr->typeArguments.push_back(std::move(argument));
+            } while (matchSymbol(SymbolType::Comma));
+            expectTypeClose();
+        }
+
+        if (checkKeyword(NEW))
+        {
+            if (!expr->typeQualifier)
+            {
+                TypeNode type;
+                const Expr* qualifier = expr->exprQualifier.get();
+                while (const FieldAccessExpr* field = dynamic_cast<const FieldAccessExpr*>(qualifier))
+                {
+                    TypeNamePart part;
+                    part.name = field->name;
+                    type.nameParts.push_back(std::move(part));
+                    qualifier = field->receiver.get();
+                }
+                const NameExpr* name = dynamic_cast<const NameExpr*>(qualifier);
+                if (!name)
+                {
+                    throw parser_exception(ParserExceptionType::InvalidMethodReference, peek());
+                }
+                TypeNamePart firstPart;
+                firstPart.name = name->name;
+                type.nameParts.push_back(std::move(firstPart));
+                std::reverse(type.nameParts.begin(), type.nameParts.end());
+                expr->typeQualifier.emplace(std::move(type));
+                expr->exprQualifier.reset();
+            }
+            if (expr->typeQualifier->objectType == ObjectType::Array && !expr->typeArguments.empty())
+            {
+                throw parser_exception(ParserExceptionType::InvalidMethodReference, peek());
+            }
+            advance();
+        }
+        else
+        {
+            expr->methodName = expectIdentifier().content;
+        }
+        return expr;
     }
 
     Uptr<SwitchExpr> Parser::parseSwitchExpr()
     {
-
+        Uptr<SwitchExpr> expr = makeUniq<SwitchExpr>();
+        expr->range = expectKeyword(SWITCH).range;
+        expectSymbol(SymbolType::LParen);
+        expr->selectorExpr = parseValue();
+        expectSymbol(SymbolType::RParen);
+        expr->cases = parseSwitchCases(*expr->range);
+        return expr;
     }
 
 } // javac

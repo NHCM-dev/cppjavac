@@ -316,12 +316,11 @@ namespace javac
             {
                 throw parser_exception(ParserExceptionType::StaticMemberInAnonymousClassBeforeJava16, *name);
             }
-            if (checkSymbol(SymbolType::Assign))
+            if (matchSymbol(SymbolType::Assign))
             {
-                //TODO: implement parse initializer
-                throw parser_exception(ParserExceptionType::UnsupportedFieldInitializer, peek());
+                variableDeclarator.initializer = parseVariableInitializer();
             }
-            if (jcutils::isInterfaceBody(context))
+            else if (jcutils::isInterfaceBody(context))
             {
                 throw parser_exception(ParserExceptionType::InterfaceFieldRequiresInitializer, peek());
             }

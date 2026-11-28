@@ -90,6 +90,7 @@ namespace javac
         InvalidClassInstanceCreationType,
         InvalidArrayCreationType,
         InvalidInstanceOfType,
+        InvalidMethodReference,
         InvalidPattern,
         SizedDimensionAfterUnsizedDimension,
         ArrayInitializerWithSizedDimension,

@@ -305,16 +305,17 @@ namespace javac
         expectSymbol(SymbolType::LParen);
         statement->selectorExpr = parseValue();
         expectSymbol(SymbolType::RParen);
+        statement->cases = parseSwitchCases(*statement->range);
+        return statement;
+    }
 
+    std::vector<SwitchCase> Parser::parseSwitchCases(SourceRange& range)
+    {
         expectSymbol(SymbolType::LBrace);
+        std::vector<SwitchCase> cases;
         const bool allowArrow = langLevelMeet(LangLevel::Fourteen);
-        const auto atLabel = [this]
-        {
-            return checkKeyword(CASE) || checkKeyword(DEFAULT);
-        };
-
         std::optional<SymbolType> switchSeparator;
-        while (atLabel())
+        while (checkKeyword(CASE) || checkKeyword(DEFAULT))
         {
             SwitchCase branch;
             do
@@ -338,13 +339,13 @@ namespace javac
                     branch.range = branch.labels.front().range;
                 }
                 branch.range->end = separator.range.end;
-            } while (switchSeparator == SymbolType::Colon && atLabel());
+            } while (switchSeparator == SymbolType::Colon && (checkKeyword(CASE) || checkKeyword(DEFAULT)));
 
             if (switchSeparator == SymbolType::Colon)
             {
-                while (!isAtEnd() && !checkSymbol(SymbolType::RBrace) && !atLabel())
+                while (!isAtEnd() && !checkSymbol(SymbolType::RBrace) && !checkKeyword(CASE) && !checkKeyword(DEFAULT))
                 {
-                    auto child = parseStatement(jcutils::StatementContext::Block);
+                    Uptr<Statement> child = parseStatement(jcutils::StatementContext::Block);
                     branch.range->end = child->range->end;
                     branch.statements.push_back(std::move(child));
                 }
@@ -364,11 +365,11 @@ namespace javac
                 branch.ruleExpr = parseValue();
                 branch.range->end = expectSymbol(SymbolType::Semicolon).range.end;
             }
-            statement->cases.push_back(std::move(branch));
+            cases.push_back(std::move(branch));
         }
 
-        statement->range->end = expectSymbol(SymbolType::RBrace).range.end;
-        return statement;
+        range.end = expectSymbol(SymbolType::RBrace).range.end;
+        return cases;
     }
 
     Uptr<ThrowStatement> Parser::parseThrowStatement()
